@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="将一个订阅拆成独立节点链接，逐条复制或一键复制全部。">
   <title>allToan · 订阅转节点</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
   <script type="module" src="/app.js"></script>
 </head>
@@ -51,6 +52,15 @@
       <div class="empty" id="empty"><span aria-hidden="true">≡</span><p>转换完成后，节点会显示在这里。</p></div>
       <ol id="nodes" class="nodes" hidden></ol>
     </section>
+    <details class="card protocol-guide">
+      <summary>支持哪些协议？</summary>
+      <dl>
+        <dt>提取原始链接</dt>
+        <dd>从纯文本或 Base64 订阅中逐条提取，保留原协议和参数。支持 <code>vless://</code>、<code>vmess://</code>、<code>trojan://</code>、<code>ss://</code>（Shadowsocks）、<code>ssr://</code>、<code>hysteria://</code>、<code>hysteria2://</code>（含 <code>hy2://</code>）、<code>tuic://</code>、<code>anytls://</code>、<code>socks://</code>、<code>socks5://</code> 和 <code>wireguard://</code>。</dd>
+        <dt>从 Clash 配置生成链接</dt>
+        <dd>读取 YAML 或 JSON 的 <code>proxies</code>，支持常见的 VLESS、VMess、Trojan、Shadowsocks、Hysteria2 和 TUIC 配置。无法转换的条目会跳过，结果区会显示数量。</dd>
+      </dl>
+    </details>
     <p id="notice" class="toast" role="status"></p>
     <footer><span>allToan <span class="dim">/</span> all to an</span><span>每个节点，独立可用</span></footer>
   </main>
