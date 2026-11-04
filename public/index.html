@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="将一个订阅拆成独立节点链接，逐条复制或一键复制全部。">
+  <title>allToan · 订阅转节点</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="mast">
+    <div class="shell top"><a class="brand" href="/" aria-label="allToan 首页"><span class="mark">a↗</span>allToan</a><span class="edition">订阅转节点工具</span></div>
+  </header>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <p class="eyebrow"><span></span> ALL TO AN</p>
+        <h1>一条订阅，<br><em>拆成独立节点。</em></h1>
+        <p class="lead">粘贴机场订阅链接，提取每一条节点链接。<br class="wide">按需单独复制，也可以一键复制全部。</p>
+      </div>
+      <div class="diagram" aria-hidden="true">
+        <div class="source"><b>01</b><span>订阅</span></div>
+        <svg viewBox="0 0 90 126" fill="none"><path d="M0 63h25q18 0 18-18V30q0-19 19-19h28M25 63h65M25 63q18 0 18 18v15q0 19 19 19h28" stroke="currentColor" stroke-width="1.5"/><circle cx="25" cy="63" r="3" fill="currentColor"/></svg>
+        <div class="branches"><span><i></i> vless://</span><span><i></i> vmess://</span><span><i></i> trojan://</span></div>
+      </div>
+    </section>
+    <section class="card" aria-labelledby="input-title">
+      <div class="section-top"><span class="step">01</span><h2 id="input-title">导入订阅</h2></div>
+      <form id="form">
+        <fieldset>
+          <legend class="sr-only">输入方式</legend>
+          <label class="choice"><input type="radio" name="mode" value="url" checked><span>订阅网址</span></label>
+          <label class="choice"><input type="radio" name="mode" value="text"><span>订阅内容</span></label>
+        </fieldset>
+        <label class="sr-only" for="url">订阅网址</label>
+        <input id="url" type="url" placeholder="https://example.com/subscribe?token=…" maxlength="8192" spellcheck="false" autocomplete="off" aria-describedby="hint">
+        <label class="sr-only" for="content">订阅内容</label>
+        <textarea id="content" rows="5" placeholder="粘贴 Base64、节点链接列表或 Clash 配置…" spellcheck="false" autocomplete="off" aria-describedby="hint" hidden></textarea>
+        <p class="hint" id="hint">支持 HTTP / HTTPS 订阅网址。订阅链接可能含有访问令牌，请勿公开分享。</p>
+        <div class="actions"><button class="primary" type="submit" id="submit">转换节点 <span aria-hidden="true">↗</span></button><button class="quiet" type="button" id="example">试用示例</button></div>
+        <p id="error" class="error" role="alert" hidden></p>
+      </form>
+    </section>
+    <section class="card results" aria-labelledby="result-title" id="results">
+      <div class="result-head">
+        <div class="section-top"><span class="step">02</span><h2 id="result-title">节点结果</h2><span id="count" class="count" hidden></span></div>
+        <div class="result-actions" id="result-actions" hidden><button class="quiet" type="button" id="download">下载 TXT</button><button class="primary compact" type="button" id="copy-all">复制全部</button></div>
+      </div>
+      <p id="note" class="hint" hidden></p>
+      <div class="empty" id="empty"><span aria-hidden="true">≡</span><p>转换完成后，节点会显示在这里。</p></div>
+      <ol id="nodes" class="nodes" hidden></ol>
+    </section>
+    <p id="notice" class="toast" role="status"></p>
+    <footer><span>allToan <span class="dim">/</span> all to an</span><span>每个节点，独立可用</span></footer>
+  </main>
+</body>
+</html>
