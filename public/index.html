@@ -52,6 +52,17 @@
       <div class="empty" id="empty"><span aria-hidden="true">≡</span><p>转换完成后，节点会显示在这里。</p></div>
       <ol id="nodes" class="nodes" hidden></ol>
     </section>
+    <section class="card subscription-card" aria-labelledby="subscription-title" id="subscription" hidden>
+      <div class="section-top"><span class="step">03</span><h2 id="subscription-title">生成新订阅</h2></div>
+      <p class="hint">保存本次转换的节点。新地址不依赖原订阅链接，持有新地址的人可以读取节点，请勿公开分享。</p>
+      <form id="publish-form">
+        <label for="publish-key">订阅发布密钥</label>
+        <input id="publish-key" type="password" required maxlength="256" autocomplete="off" placeholder="填写部署者设置的密钥">
+        <button class="primary" type="submit" id="publish-button">生成订阅链接</button>
+      </form>
+      <p id="publish-error" class="error" role="alert" hidden></p>
+      <ul id="profiles" class="nodes" aria-live="polite"></ul>
+    </section>
     <details class="card protocol-guide">
       <summary>支持哪些协议？</summary>
       <dl>

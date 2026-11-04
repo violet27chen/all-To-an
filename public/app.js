@@ -55,6 +55,9 @@ $('download').addEventListener('click', () => {
 });
 function render(data) {
   nodes = data.nodes;
+  $('subscription').hidden = !nodes.length;
+  $('profiles').replaceChildren();
+  $('publish-error').hidden = true;
   $('nodes').replaceChildren();
   $('empty').hidden = !!nodes.length;
   for (const id of ['nodes', 'result-actions', 'count']) $(id).hidden = !nodes.length;
@@ -89,6 +92,87 @@ function render(data) {
   }
   $('nodes').append(list);
 }
+
+const profileLabels = {
+  universal: '通用 Base64 / v2rayN',
+  verge: 'Clash Verge Rev / Mihomo',
+  clash: '旧版 Clash 兼容（过滤 Trojan 等）',
+};
+
+function showProfiles(profiles) {
+  const list = $('profiles');
+  list.replaceChildren();
+  for (const [format, label] of Object.entries(profileLabels)) {
+    const profile = profiles[format];
+    const row = document.createElement('li');
+    row.className = 'node profile-row';
+    const info = document.createElement('div');
+    const title = document.createElement('h3');
+    title.className = 'node-title';
+    title.textContent = label;
+    const detail = document.createElement('p');
+    detail.className = 'hint';
+    detail.textContent = profile.count + ' 个节点' + (profile.skipped ? '，跳过 ' + profile.skipped + ' 个不兼容节点' : '');
+    info.append(title, detail);
+    row.append(info);
+    if (profile.path) {
+      const url = new URL(profile.path, location.origin).href;
+      const buttons = document.createElement('div');
+      buttons.className = 'result-actions';
+      const copyButton = document.createElement('button');
+      copyButton.type = 'button';
+      copyButton.className = 'quiet';
+      copyButton.textContent = '复制订阅';
+      copyButton.setAttribute('aria-label', '复制订阅：' + label);
+      copyButton.addEventListener('click', () => copy(url, '已复制订阅地址'));
+      buttons.append(copyButton);
+      if (format !== 'universal') {
+        const importLink = document.createElement('a');
+        importLink.className = 'quiet import-link';
+        importLink.href = 'clash://install-config?url=' + encodeURIComponent(url) + '&name=allToan';
+        importLink.textContent = '一键导入';
+        importLink.setAttribute('aria-label', '一键导入：' + label);
+        buttons.append(importLink);
+      }
+      row.append(buttons);
+    }
+    list.append(row);
+  }
+}
+
+$('publish-form').addEventListener('submit', async event => {
+  event.preventDefault();
+  const button = $('publish-button');
+  const errorBox = $('publish-error');
+  const selection = nodes;
+  if (button.disabled || !selection.length) return;
+  errorBox.hidden = true;
+  button.disabled = true;
+  button.textContent = '正在生成…';
+  try {
+    const response = await fetch('/api/subscription', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        Authorization: 'Bearer ' + $('publish-key').value.trim(),
+      },
+      body: allLinks(),
+      signal: AbortSignal.timeout(18000),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || !data) throw new Error(data?.error || '生成订阅失败，请稍后重试。');
+    if (nodes !== selection) return;
+    showProfiles(data);
+    notice('已生成新订阅地址');
+  } catch (error) {
+    if (nodes !== selection) return;
+    errorBox.textContent = error.name === 'TimeoutError' ? '生成订阅超时，请稍后重试。' : error.message;
+    errorBox.hidden = false;
+  } finally {
+    button.disabled = false;
+    button.textContent = '生成订阅链接';
+  }
+});
 
 form.addEventListener('submit', async e => {
   e.preventDefault();
