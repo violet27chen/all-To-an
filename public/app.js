@@ -69,13 +69,13 @@ function render(data) {
   for (const node of nodes) counts.set(node.protocol, (counts.get(node.protocol) || 0) + 1);
   const choices = document.createDocumentFragment();
   for (const protocol of data.protocols || []) {
+    const count = counts.get(protocol);
+    if (!count) continue;
     const label = document.createElement('label');
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.value = protocol;
-    const count = counts.get(protocol) || 0;
-    checkbox.disabled = !count;
-    checkbox.checked = !!count;
+    checkbox.checked = true;
     label.append(checkbox, protocol.toUpperCase() + ' (' + count + ')');
     choices.append(label);
   }
@@ -126,7 +126,7 @@ function applyFilter() {
 $('protocol-choices').addEventListener('change', applyFilter);
 for (const [id, checked] of [['filter-all', true], ['filter-none', false]]) {
   $(id).addEventListener('click', () => {
-    for (const input of protocolChoices()) input.checked = checked && !input.disabled;
+    for (const input of protocolChoices()) input.checked = checked;
     applyFilter();
   });
 }
