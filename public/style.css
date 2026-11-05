@@ -52,3 +52,27 @@ fieldset{border:0;padding:4px;background:#edf0e8;border-radius:9px;display:inlin
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.protocol-filter {
+  margin: 12px 0;
+}
+.protocol-filter summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+#protocol-options {
+  display: block;
+  padding: 0;
+  background: transparent;
+}
+#protocol-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+#protocol-choices label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}

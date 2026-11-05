@@ -2,10 +2,10 @@ const $ = id => document.getElementById(id);
 const form = $('form');
 const input = { url: $('url'), text: $('content') };
 const hints = {
-  url: '支持 HTTP / HTTPS 订阅网址。订阅链接可能含有访问令牌，请勿公开分享。',
+  url: '每行一个 HTTP / HTTPS 网址，最多 8 个。成功读取的节点会自动合并去重。',
   text: '支持 Base64、逐行排列的节点链接及含 proxies 的 Clash YAML / JSON。',
 };
-let nodes = [], noticeTimer, pending = false;
+let nodes = [], visibleNodes = [], noticeTimer, pending = false;
 function mode() { return form.elements.mode.value; }
 function updateMode() {
   for (const [key, el] of Object.entries(input)) {
@@ -43,10 +43,10 @@ async function copy(text, message) {
   }
   notice(message);
 }
-const allLinks = () => nodes.map(node => node.link).join('\n');
-$('copy-all').addEventListener('click', () => copy(allLinks(), '已复制全部 ' + nodes.length + ' 个节点'));
+const links = list => list.map(node => node.link).join('\n');
+$('copy-all').addEventListener('click', () => copy(links(visibleNodes), '已复制 ' + visibleNodes.length + ' 个节点'));
 $('download').addEventListener('click', () => {
-  const url = URL.createObjectURL(new Blob([allLinks() + '\n'], { type: 'text/plain;charset=utf-8' }));
+  const url = URL.createObjectURL(new Blob([links(visibleNodes) + '\n'], { type: 'text/plain;charset=utf-8' }));
   const anchor = document.createElement('a');
   anchor.href = url;
   anchor.download = 'allToan-nodes.txt';
@@ -55,20 +55,50 @@ $('download').addEventListener('click', () => {
 });
 function render(data) {
   nodes = data.nodes;
-  $('subscription').hidden = !nodes.length;
-  $('profiles').replaceChildren();
-  $('publish-error').hidden = true;
-  $('nodes').replaceChildren();
-  $('empty').hidden = !!nodes.length;
-  for (const id of ['nodes', 'result-actions', 'count']) $(id).hidden = !nodes.length;
-  $('count').textContent = nodes.length + ' 个';
   const notes = [];
+  if (data.sourceCount > 1) {
+    notes.push('已合并 ' + (data.sourceCount - data.failedSources.length) + ' / ' + data.sourceCount + ' 个订阅');
+  }
   if (data.duplicates) notes.push('已合并 ' + data.duplicates + ' 条重复链接');
   if (data.skipped) notes.push('跳过 ' + data.skipped + ' 条无法转换的记录');
+  for (const failure of data.failedSources || []) notes.push('第 ' + failure.source + ' 个订阅：' + failure.message);
   $('note').textContent = notes.join(' · ');
   $('note').hidden = !notes.length;
+  $('protocol-filter').hidden = !nodes.length;
+  const counts = new Map();
+  for (const node of nodes) counts.set(node.protocol, (counts.get(node.protocol) || 0) + 1);
+  const choices = document.createDocumentFragment();
+  for (const protocol of data.protocols || []) {
+    const label = document.createElement('label');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.value = protocol;
+    const count = counts.get(protocol) || 0;
+    checkbox.disabled = !count;
+    checkbox.checked = !!count;
+    label.append(checkbox, protocol.toUpperCase() + ' (' + count + ')');
+    choices.append(label);
+  }
+  $('protocol-choices').replaceChildren(choices);
+  applyFilter();
+}
+
+const protocolChoices = () => [...$('protocol-choices').querySelectorAll('input')];
+const selectedProtocols = () => protocolChoices().filter(input => input.checked).map(input => input.value);
+function applyFilter() {
+  const selected = new Set(selectedProtocols());
+  visibleNodes = nodes.filter(node => selected.has(node.protocol));
+  $('subscription').hidden = !visibleNodes.length;
+  $('profiles').replaceChildren();
+  $('publish-error').hidden = true;
+  $('empty').hidden = !!visibleNodes.length;
+  $('empty').querySelector('p').textContent = nodes.length ? '没有符合筛选条件的节点。' : '转换完成后，节点会显示在这里。';
+  for (const id of ['nodes', 'result-actions']) $(id).hidden = !visibleNodes.length;
+  $('count').hidden = !nodes.length;
+  $('count').textContent = visibleNodes.length === nodes.length ? nodes.length + ' 个' : visibleNodes.length + ' / ' + nodes.length + ' 个';
+  $('copy-all').textContent = visibleNodes.length === nodes.length ? '复制全部' : '复制筛选结果';
   const list = document.createDocumentFragment();
-  for (const node of nodes) {
+  for (const node of visibleNodes) {
     const row = document.createElement('li');
     row.className = 'node';
     const info = document.createElement('div');
@@ -90,7 +120,15 @@ function render(data) {
     row.append(info, button);
     list.append(row);
   }
-  $('nodes').append(list);
+  $('nodes').replaceChildren(list);
+}
+
+$('protocol-choices').addEventListener('change', applyFilter);
+for (const [id, checked] of [['filter-all', true], ['filter-none', false]]) {
+  $(id).addEventListener('click', () => {
+    for (const input of protocolChoices()) input.checked = checked && !input.disabled;
+    applyFilter();
+  });
 }
 
 const profileLabels = {
@@ -144,25 +182,27 @@ $('publish-form').addEventListener('submit', async event => {
   event.preventDefault();
   const button = $('publish-button');
   const errorBox = $('publish-error');
-  const selection = nodes;
+  const selection = visibleNodes;
   if (button.disabled || !selection.length) return;
   errorBox.hidden = true;
   button.disabled = true;
   button.textContent = '正在生成…';
   try {
-    const response = await fetch('/api/subscription', {
+    const endpoint = new URL('/api/subscription', location.origin);
+    if (selection.length !== nodes.length) endpoint.searchParams.set('protocols', selectedProtocols().join(','));
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      body: allLinks(),
+      body: links(nodes),
       signal: AbortSignal.timeout(18000),
     });
     const data = await response.json().catch(() => null);
     if (!response.ok || !data) throw new Error(data?.error || '生成订阅失败，请稍后重试。');
-    if (nodes !== selection) return;
+    if (visibleNodes !== selection) return;
     showProfiles(data);
     notice('已生成新订阅地址');
   } catch (error) {
-    if (nodes !== selection) return;
+    if (visibleNodes !== selection) return;
     errorBox.textContent = error.name === 'TimeoutError' ? '生成订阅超时，请稍后重试。' : error.message;
     errorBox.hidden = false;
   } finally {

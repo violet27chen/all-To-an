@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import { get, put } from '@vercel/blob';
-import { convert } from '../lib/convert.js';
+import { convert, parseProtocolFilter } from '../lib/convert.js';
 import { buildProfiles } from '../lib/profiles.js';
 
 const headers = { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' };
@@ -13,7 +13,7 @@ const formats = {
 };
 const pathFor = id => 'alltoan/subscriptions/' + id + '.json';
 
-async function publish(request) {
+async function publish(request, filter) {
   const origin = request.headers.get('origin');
   if (origin && origin !== new URL(request.url).origin) return json({ error: '请在本站页面生成订阅。' }, 403);
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -44,6 +44,9 @@ async function publish(request) {
       return json({ error: '生成的订阅内容超过 4 MB，请分批发布。' }, 413);
     }
   }
+  const selectedNodes = filter ? nodes.filter(node => filter.has(node.protocol)) : nodes;
+  if (!selectedNodes.length) return json({ error: '没有符合筛选条件的节点。' }, 422);
+  const selectedProfiles = selectedNodes.length === nodes.length ? profiles : buildProfiles(selectedNodes);
   const id = randomBytes(24).toString('base64url');
   try {
     await put(pathFor(id), JSON.stringify(profiles), {
@@ -52,13 +55,14 @@ async function publish(request) {
   } catch {
     return json({ error: '无法保存订阅，请检查私有 Blob 配置后重试。' }, 502);
   }
-  return json(Object.fromEntries(Object.entries(profiles).map(([target, { count, skipped }]) => [
-    target, { count, skipped, path: count ? '/api/subscription?id=' + id + '&format=' + target : null },
-  ])), 201);
+  return json(Object.fromEntries(Object.entries(selectedProfiles).map(([target, { count, skipped }]) => {
+    const params = new URLSearchParams({ id, format: target });
+    if (filter) params.set('protocols', [...filter].join(','));
+    return [target, { count, skipped, path: count ? '/api/subscription?' + params : null }];
+  })), 201);
 }
 
-async function read(request) {
-  const params = new URL(request.url).searchParams;
+async function read(request, params, filter) {
   const id = params.get('id') || '';
   const format = params.get('format') || 'universal';
   if (!/^[a-zA-Z0-9_-]{32}$/.test(id) || !Object.hasOwn(formats, format)) return json({ error: invalid }, 404);
@@ -67,7 +71,13 @@ async function read(request) {
   try {
     const blob = await get(pathFor(id), { token, access: 'private', useCache: false });
     if (!blob || blob.statusCode !== 200) return json({ error: invalid }, 404);
-    const profiles = await new Response(blob.stream).json();
+    let profiles = await new Response(blob.stream).json();
+    if (filter) {
+      const { nodes } = convert(profiles.universal.body);
+      const selected = nodes.filter(node => filter.has(node.protocol));
+      if (!selected.length) return json({ error: '没有符合筛选条件的节点。' }, 404);
+      profiles = buildProfiles(selected);
+    }
     if (!profiles[format]?.count) return json({ error: '该格式没有可用节点。' }, 404);
     return new Response(request.method === 'HEAD' ? null : profiles[format].body, {
       headers: {
@@ -83,8 +93,12 @@ async function read(request) {
 
 export default {
   fetch(request) {
-    if (request.method === 'POST') return publish(request);
-    if (request.method === 'GET' || request.method === 'HEAD') return read(request);
+    const params = new URL(request.url).searchParams;
+    let filter;
+    try { filter = parseProtocolFilter(params.get('protocols')); }
+    catch (error) { return json({ error: error.message }, 400); }
+    if (request.method === 'POST') return publish(request, filter);
+    if (request.method === 'GET' || request.method === 'HEAD') return read(request, params, filter);
     return json({ error: '不支持的请求方式。' }, 405);
   },
 };

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="将一个订阅拆成独立节点链接，逐条复制或一键复制全部。">
+  <meta name="description" content="聚合多个订阅，按协议筛选节点，并生成新的订阅链接。">
   <title>allToan · 订阅转节点</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/style.css">
@@ -17,8 +17,8 @@
     <section class="hero">
       <div>
         <p class="eyebrow"><span></span> ALL TO AN</p>
-        <h1>一条订阅，<br><em>拆成独立节点。</em></h1>
-        <p class="lead">粘贴机场订阅链接，提取每一条节点链接。<br class="wide">按需单独复制，也可以一键复制全部。</p>
+        <h1>聚合多个订阅，<br><em>筛选需要的节点。</em></h1>
+        <p class="lead">提取独立节点链接，按协议筛选。<br class="wide">复制选中的节点，或合并成一个新订阅。</p>
       </div>
       <div class="diagram" aria-hidden="true">
         <div class="source"><b>01</b><span>订阅</span></div>
@@ -35,10 +35,10 @@
           <label class="choice"><input type="radio" name="mode" value="text"><span>订阅内容</span></label>
         </fieldset>
         <label class="sr-only" for="url">订阅网址</label>
-        <input id="url" type="url" placeholder="https://example.com/subscribe?token=…" maxlength="8192" spellcheck="false" autocomplete="off" aria-describedby="hint">
+        <textarea id="url" rows="3" placeholder="每行粘贴一个订阅网址，最多 8 个" maxlength="65552" spellcheck="false" autocomplete="off" aria-describedby="hint"></textarea>
         <label class="sr-only" for="content">订阅内容</label>
         <textarea id="content" rows="5" placeholder="粘贴 Base64、节点链接列表或 Clash 配置…" spellcheck="false" autocomplete="off" aria-describedby="hint" hidden></textarea>
-        <p class="hint" id="hint">支持 HTTP / HTTPS 订阅网址。订阅链接可能含有访问令牌，请勿公开分享。</p>
+        <p class="hint" id="hint">每行一个 HTTP / HTTPS 网址，最多 8 个。成功读取的节点会自动合并去重。</p>
         <div class="actions"><button class="primary" type="submit" id="submit">转换节点 <span aria-hidden="true">↗</span></button><button class="quiet" type="button" id="example">试用示例</button></div>
         <p id="error" class="error" role="alert" hidden></p>
       </form>
@@ -49,12 +49,20 @@
         <div class="result-actions" id="result-actions" hidden><button class="quiet" type="button" id="download">下载 TXT</button><button class="primary compact" type="button" id="copy-all">复制全部</button></div>
       </div>
       <p id="note" class="hint" hidden></p>
+      <details id="protocol-filter" class="protocol-filter" hidden>
+        <summary>按协议筛选</summary>
+        <fieldset id="protocol-options"><legend class="sr-only">保留的协议</legend><div id="protocol-choices"></div></fieldset>
+        <div class="result-actions">
+          <button type="button" class="quiet" id="filter-all">全选</button>
+          <button type="button" class="quiet" id="filter-none">清空</button>
+        </div>
+      </details>
       <div class="empty" id="empty"><span aria-hidden="true">≡</span><p>转换完成后，节点会显示在这里。</p></div>
       <ol id="nodes" class="nodes" hidden></ol>
     </section>
     <section class="card subscription-card" aria-labelledby="subscription-title" id="subscription" hidden>
       <div class="section-top"><span class="step">03</span><h2 id="subscription-title">生成新订阅</h2></div>
-      <p class="hint">保存本次转换的节点。新地址不依赖原订阅链接，持有新地址的人可以读取节点，请勿公开分享。</p>
+      <p class="hint">生成的地址会应用当前协议筛选。快照保存合并后的所有节点，可通过地址参数调整筛选。持有地址的人可以读取快照，请勿公开分享。</p>
       <form id="publish-form">
         <button class="primary" type="submit" id="publish-button">生成订阅链接</button>
       </form>

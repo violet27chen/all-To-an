@@ -1,5 +1,6 @@
-import { convert } from '../lib/convert.js';
-import { LIMIT, readSubscription } from '../lib/subscription.js';
+import { convert, protocols } from '../lib/convert.js';
+import { aggregate, MAX_SOURCES, MAX_URL_LENGTH } from '../lib/aggregate.js';
+import { LIMIT } from '../lib/subscription.js';
 
 const headers = { 'Cache-Control': 'no-store' };
 const json = (body, status = 200) => Response.json(body, { status, headers });
@@ -26,19 +27,17 @@ export default {
       return json({ error: '请先粘贴订阅网址或内容。' }, 400);
     }
     const input = body.input.trim();
-    if (Buffer.byteLength(input) > (body.mode === 'url' ? 8192 : LIMIT)) {
+    if (Buffer.byteLength(input) > (body.mode === 'url' ? MAX_SOURCES * (MAX_URL_LENGTH + 2) : LIMIT)) {
       return json({ error: '输入太长，请检查网址或分批转换。' }, 413);
     }
-    let source = input;
-    if (body.mode === 'url') {
-      try { source = await readSubscription(input); }
-      catch (error) {
-        const message = error.code || error.name === 'TimeoutError' || error.name === 'AbortError'
-          ? '无法读取订阅。请检查网址，或在浏览器打开订阅后粘贴内容。' : error.message;
-        return json({ error: message }, 422);
+    try {
+      const result = body.mode === 'url' ? await aggregate(input) : convert(input);
+      const payload = JSON.stringify({ ...result, protocols });
+      if (Buffer.byteLength(payload) > 4 * LIMIT) {
+        return json({ error: '转换结果超过 4 MB，请分批转换。' }, 413);
       }
+      return new Response(payload, { headers: { ...headers, 'Content-Type': 'application/json' } });
     }
-    try { return json(convert(source)); }
     catch (error) { return json({ error: error.message }, 422); }
   },
 };
