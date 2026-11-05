@@ -38,6 +38,19 @@ textarea{width:100%;display:block;color:var(--ink);background:#fbfcf7;border:1px
 .actions {
   flex-wrap: wrap;
 }
+.node-management {
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.node-management .hint {
+  margin: 0;
+}
+.remove-choice {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+}
 #profiles:empty {
   margin: 0;
 }

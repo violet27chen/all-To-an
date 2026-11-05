@@ -35,7 +35,6 @@
         <div class="actions">
           <button class="primary" type="submit" id="submit">解析节点 <span aria-hidden="true">↗</span></button>
           <button class="quiet" type="submit" id="quick-publish">一键生成订阅</button>
-          <button class="quiet" type="button" id="example">试用示例</button>
         </div>
         <p id="error" class="error" role="alert" hidden></p>
       </form>
@@ -54,12 +53,18 @@
           <button type="button" class="quiet" id="filter-none">清空</button>
         </div>
       </details>
+      <div id="node-management" class="result-actions node-management" hidden>
+        <button type="button" class="quiet" id="edit-nodes" aria-expanded="false" aria-controls="nodes">选择要移除的节点</button>
+        <button type="button" class="primary" id="remove-nodes" hidden>移除所选节点</button>
+        <button type="button" class="quiet" id="restore-nodes" hidden>恢复已移除节点</button>
+        <span id="removed-count" class="hint" role="status"></span>
+      </div>
       <div class="empty" id="empty"><span aria-hidden="true">≡</span><p>转换完成后，节点会显示在这里。</p></div>
       <ol id="nodes" class="nodes" hidden></ol>
     </section>
     <section class="card subscription-card" aria-labelledby="subscription-title" id="subscription" hidden>
       <div class="section-top"><span class="step">03</span><h2 id="subscription-title" tabindex="-1">生成新订阅</h2></div>
-      <p class="hint">生成的地址会应用当前协议筛选。快照保存合并后的所有节点，可通过地址参数调整筛选。持有地址的人可以读取快照，请勿公开分享。</p>
+      <p class="hint">新地址应用当前协议筛选，并从快照中排除手动移除的节点。持有地址的人可以读取快照，请勿公开分享。</p>
       <form id="publish-form">
         <button class="primary" type="submit" id="publish-button">生成订阅链接</button>
       </form>

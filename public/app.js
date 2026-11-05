@@ -1,7 +1,9 @@
 const $ = id => document.getElementById(id);
 const form = $('form');
 const input = $('content');
-let nodes = [], visibleNodes = [], showNodeList = false, noticeTimer, pending = false;
+let nodes = [], visibleNodes = [], showNodeList = false, editingNodes = false, noticeTimer, pending = false;
+const removedNodes = new Set();
+const retainedNodes = () => nodes.filter(node => !removedNodes.has(node.link));
 input.addEventListener('input', () => { $('error').hidden = true; });
 
 function notice(message) {
@@ -41,6 +43,8 @@ $('download').addEventListener('click', () => {
 });
 function render(data, previewNodes = false) {
   nodes = data.nodes;
+  removedNodes.clear();
+  editingNodes = false;
   showNodeList = previewNodes && data.inputType === 'url';
   const notes = [];
   if (data.sourceCount > 1) {
@@ -74,18 +78,31 @@ const protocolChoices = () => [...$('protocol-choices').querySelectorAll('input'
 const selectedProtocols = () => protocolChoices().filter(input => input.checked).map(input => input.value);
 function applyFilter() {
   const selected = new Set(selectedProtocols());
-  visibleNodes = nodes.filter(node => selected.has(node.protocol));
+  visibleNodes = retainedNodes().filter(node => selected.has(node.protocol));
   $('subscription').hidden = !visibleNodes.length;
   $('profiles').replaceChildren();
   $('publish-error').hidden = true;
   $('empty').hidden = !!visibleNodes.length;
   $('empty').querySelector('p').textContent = nodes.length ? '没有符合筛选条件的节点。' : '转换完成后，节点会显示在这里。';
-  $('nodes').hidden = !showNodeList || !visibleNodes.length;
   $('result-actions').hidden = !visibleNodes.length;
   $('count').hidden = !nodes.length;
   $('count').textContent = visibleNodes.length === nodes.length ? nodes.length + ' 个' : visibleNodes.length + ' / ' + nodes.length + ' 个';
   $('copy-all').textContent = visibleNodes.length === nodes.length ? '复制全部' : '复制筛选结果';
-  if (!showNodeList) {
+  renderNodeList();
+}
+
+function renderNodeList() {
+  const editButton = $('edit-nodes');
+  editButton.hidden = !visibleNodes.length && !editingNodes;
+  editButton.textContent = editingNodes ? '取消选择' : '选择要移除的节点';
+  editButton.setAttribute('aria-expanded', String(editingNodes));
+  $('node-management').hidden = !visibleNodes.length && !removedNodes.size && !editingNodes;
+  $('remove-nodes').hidden = !editingNodes;
+  $('remove-nodes').disabled = true;
+  $('restore-nodes').hidden = !removedNodes.size;
+  $('removed-count').textContent = removedNodes.size ? '已移除 ' + removedNodes.size + ' 个节点' : '';
+  $('nodes').hidden = !(showNodeList || editingNodes) || !visibleNodes.length;
+  if ($('nodes').hidden) {
     $('nodes').replaceChildren();
     return;
   }
@@ -103,17 +120,51 @@ function applyFilter() {
     const link = document.createElement('code');
     link.textContent = node.link;
     info.append(title, link);
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'quiet';
-    button.textContent = '复制';
-    button.setAttribute('aria-label', '复制 ' + node.name);
-    button.addEventListener('click', () => copy(node.link, '已复制：' + node.name));
-    row.append(info, button);
+    if (editingNodes) {
+      const label = document.createElement('label');
+      label.className = 'remove-choice';
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.value = node.link;
+      checkbox.setAttribute('aria-label', '移除 ' + node.name);
+      label.append(checkbox, '移除');
+      row.append(info, label);
+    } else {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'quiet';
+      button.textContent = '复制';
+      button.setAttribute('aria-label', '复制 ' + node.name);
+      button.addEventListener('click', () => copy(node.link, '已复制：' + node.name));
+      row.append(info, button);
+    }
     list.append(row);
   }
   $('nodes').replaceChildren(list);
 }
+
+$('edit-nodes').addEventListener('click', () => {
+  editingNodes = !editingNodes;
+  renderNodeList();
+});
+const checkedNodes = () => [...$('nodes').querySelectorAll('input:checked')];
+$('nodes').addEventListener('change', () => {
+  $('remove-nodes').disabled = !checkedNodes().length;
+});
+$('remove-nodes').addEventListener('click', () => {
+  const selected = checkedNodes();
+  if (!selected.length) return;
+  for (const checkbox of selected) removedNodes.add(checkbox.value);
+  editingNodes = false;
+  applyFilter();
+  $('restore-nodes').focus();
+});
+$('restore-nodes').addEventListener('click', () => {
+  removedNodes.clear();
+  editingNodes = false;
+  applyFilter();
+  if (!$('edit-nodes').hidden) $('edit-nodes').focus();
+});
 
 $('protocol-choices').addEventListener('change', applyFilter);
 for (const [id, checked] of [['filter-all', true], ['filter-none', false]]) {
@@ -180,12 +231,13 @@ async function publishSubscription() {
   $('quick-publish').disabled = true;
   button.textContent = '正在生成…';
   try {
+    const retained = retainedNodes();
     const endpoint = new URL('/api/subscription', location.origin);
-    if (selection.length !== nodes.length) endpoint.searchParams.set('protocols', selectedProtocols().join(','));
+    if (selection.length !== retained.length) endpoint.searchParams.set('protocols', selectedProtocols().join(','));
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      body: links(nodes),
+      body: links(retained),
       signal: AbortSignal.timeout(18000),
     });
     const data = await response.json().catch(() => null);
@@ -220,7 +272,7 @@ form.addEventListener('submit', async e => {
   render({ nodes: [] });
   const submit = $('submit');
   const quickButton = $('quick-publish');
-  const controls = [submit, quickButton, $('example'), input];
+  const controls = [submit, quickButton, input];
   for (const el of controls) el.disabled = true;
   if (quick) quickButton.textContent = '正在解析节点…';
   else submit.firstChild.textContent = '正在转换… ';
@@ -252,13 +304,4 @@ form.addEventListener('submit', async e => {
     submit.firstChild.textContent = '解析节点 ';
     pending = false;
   }
-});
-
-$('example').addEventListener('click', () => {
-  input.value = [
-    'vless://00000000-0000-4000-8000-000000000000@example.com:443?encryption=none&security=tls&type=tcp#VLESS%20%E7%A4%BA%E4%BE%8B',
-    'trojan://demo-password@example.net:443?security=tls#Trojan%20%E7%A4%BA%E4%BE%8B',
-    'ss://YWVzLTEyOC1nY206ZGVtby1wYXNzd29yZA@example.org:8388#SS%20%E7%A4%BA%E4%BE%8B',
-  ].join('\n');
-  form.requestSubmit($('submit'));
 });
