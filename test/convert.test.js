@@ -77,9 +77,13 @@ test('auto mode identifies URLs and supported pasted content through the same en
   const urls = await send({ mode: 'auto', input: 'HTTP://127.0.0.1/\r\n\r\nhttps://localhost/' });
   assert.equal(urls.status, 422);
   assert.match((await urls.json()).error, /第 2 个：.*公网/);
-  const mixed = await send({ mode: 'auto', input: 'https://example.com/sub\n' + vless });
-  assert.equal(mixed.status, 422);
-  assert.match((await mixed.json()).error, /分开粘贴/);
+  const mixed = await send({ mode: 'auto', input: 'https://127.0.0.1/sub\n' + vless });
+  assert.equal(mixed.status, 200);
+  const result = await mixed.json();
+  assert.equal(result.inputType, 'mixed');
+  assert.equal(result.nodes[0].link, vless);
+  assert.equal(result.failedSources[0].source, 1);
+  assert.match(result.failedSources[0].message, /公网/);
 });
 
 test('URL mode blocks private and disguised loopback targets', async () => {

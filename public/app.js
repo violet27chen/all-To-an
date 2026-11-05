@@ -52,7 +52,7 @@ function render(data, previewNodes = false) {
   }
   if (data.duplicates) notes.push('已合并 ' + data.duplicates + ' 条重复链接');
   if (data.skipped) notes.push('跳过 ' + data.skipped + ' 条无法转换的记录');
-  for (const failure of data.failedSources || []) notes.push('第 ' + failure.source + ' 个订阅：' + failure.message);
+  for (const failure of data.failedSources || []) notes.push('第 ' + failure.source + ' 条输入的订阅：' + failure.message);
   $('note').textContent = notes.join(' · ');
   $('note').hidden = !notes.length;
   $('protocol-filter').hidden = !nodes.length;

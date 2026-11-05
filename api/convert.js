@@ -1,5 +1,5 @@
 import { convert, protocols } from '../lib/convert.js';
-import { aggregate, MAX_SOURCES, MAX_URL_LENGTH } from '../lib/aggregate.js';
+import { aggregate, inputLines, isSubscriptionUrl, MAX_SOURCES, MAX_URL_LENGTH } from '../lib/aggregate.js';
 import { LIMIT } from '../lib/subscription.js';
 
 const headers = { 'Cache-Control': 'no-store' };
@@ -29,18 +29,17 @@ export default {
     const input = body.input.trim();
     let mode = body.mode;
     if (mode === 'auto') {
-      const lines = input.split(/\r\n|\n|\r/).map(line => line.trim()).filter(Boolean);
-      const urls = lines.filter(line => /^https?:\/\//i.test(line));
-      if (urls.length && urls.length < lines.length && lines.every(line => /^[a-z][\w+.-]*:\/\//i.test(line))) {
-        return json({ error: '请分开粘贴订阅网址和独立节点链接。' }, 422);
+      const lines = inputLines(input);
+      mode = 'text';
+      if (lines.some(isSubscriptionUrl) && lines.every(line => /^[a-z][\w+.-]*:\/\//i.test(line))) {
+        mode = lines.every(isSubscriptionUrl) ? 'url' : 'mixed';
       }
-      mode = urls.length === lines.length ? 'url' : 'text';
     }
     if (Buffer.byteLength(input) > (mode === 'url' ? MAX_SOURCES * (MAX_URL_LENGTH + 2) : LIMIT)) {
       return json({ error: '输入太长，请检查网址或分批转换。' }, 413);
     }
     try {
-      const result = mode === 'url' ? await aggregate(input) : convert(input);
+      const result = mode === 'text' ? convert(input) : await aggregate(input, { includeNodes: mode === 'mixed' });
       const payload = JSON.stringify({ ...result, protocols, inputType: mode });
       if (Buffer.byteLength(payload) > 4 * LIMIT) {
         return json({ error: '转换结果超过 4 MB，请分批转换。' }, 413);
