@@ -23,8 +23,12 @@ test('subscription snapshots retain every link and filter each Clash profile ind
   assert.deepEqual(modern.proxies[0]['reality-opts'], { 'public-key': 'key', 'short-id': '001a' });
   assert.equal(modern.proxies[0]['grpc-opts']['grpc-service-name'], 'proxy');
   assert.equal(modern.proxies[1].password, 'p@ss');
-  assert.deepEqual(modern['proxy-groups'][0].proxies, ['same', 'same (2)', 'DIRECT (2)']);
-  assert.deepEqual(load(clash.body).proxies.map(proxy => proxy.type), ['ss']);
+  assert.deepEqual(modern['proxy-groups'][0].proxies, ['自动选择', 'same', 'same (2)', 'DIRECT (2)']);
+  assert.equal(modern['proxy-groups'][1].type, 'url-test');
+  assert.deepEqual(modern['proxy-groups'][1].proxies, ['same', 'same (2)', 'DIRECT (2)']);
+  const legacy = load(clash.body);
+  assert.deepEqual(legacy.proxies.map(proxy => proxy.type), ['ss']);
+  assert.deepEqual(legacy['proxy-groups'][1].proxies, ['DIRECT (2)']);
 });
 
 test('unsupported configurations produce no YAML link and keep the original URI', () => {

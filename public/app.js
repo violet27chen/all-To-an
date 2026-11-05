@@ -1,23 +1,8 @@
 const $ = id => document.getElementById(id);
 const form = $('form');
-const input = { url: $('url'), text: $('content') };
-const hints = {
-  url: '每行一个 HTTP / HTTPS 网址，最多 8 个。成功读取的节点会自动合并去重。',
-  text: '每行粘贴一个节点链接，可一键生成订阅。也支持 Base64 和含 proxies 的 Clash YAML / JSON。',
-};
-let nodes = [], visibleNodes = [], noticeTimer, pending = false;
-function mode() { return form.elements.mode.value; }
-function updateMode() {
-  for (const [key, el] of Object.entries(input)) {
-    el.hidden = key !== mode();
-    el.required = !el.hidden;
-  }
-  $('hint').textContent = hints[mode()];
-  $('quick-publish').hidden = mode() !== 'text';
-  $('error').hidden = true;
-}
-form.addEventListener('change', e => { if (e.target.name === 'mode') updateMode(); });
-updateMode();
+const input = $('content');
+let nodes = [], visibleNodes = [], showNodeList = false, noticeTimer, pending = false;
+input.addEventListener('input', () => { $('error').hidden = true; });
 
 function notice(message) {
   $('notice').textContent = message;
@@ -54,8 +39,9 @@ $('download').addEventListener('click', () => {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-function render(data) {
+function render(data, previewNodes = false) {
   nodes = data.nodes;
+  showNodeList = previewNodes && data.inputType === 'url';
   const notes = [];
   if (data.sourceCount > 1) {
     notes.push('已合并 ' + (data.sourceCount - data.failedSources.length) + ' / ' + data.sourceCount + ' 个订阅');
@@ -94,10 +80,15 @@ function applyFilter() {
   $('publish-error').hidden = true;
   $('empty').hidden = !!visibleNodes.length;
   $('empty').querySelector('p').textContent = nodes.length ? '没有符合筛选条件的节点。' : '转换完成后，节点会显示在这里。';
-  for (const id of ['nodes', 'result-actions']) $(id).hidden = !visibleNodes.length;
+  $('nodes').hidden = !showNodeList || !visibleNodes.length;
+  $('result-actions').hidden = !visibleNodes.length;
   $('count').hidden = !nodes.length;
   $('count').textContent = visibleNodes.length === nodes.length ? nodes.length + ' 个' : visibleNodes.length + ' / ' + nodes.length + ' 个';
   $('copy-all').textContent = visibleNodes.length === nodes.length ? '复制全部' : '复制筛选结果';
+  if (!showNodeList) {
+    $('nodes').replaceChildren();
+    return;
+  }
   const list = document.createDocumentFragment();
   for (const node of visibleNodes) {
     const row = document.createElement('li');
@@ -221,15 +212,15 @@ $('publish-form').addEventListener('submit', event => {
 form.addEventListener('submit', async e => {
   e.preventDefault();
   if (pending) return;
-  const selection = mode(), value = input[selection].value.trim();
-  const quick = selection === 'text' && e.submitter === $('quick-publish');
-  if (!value) { input[selection].focus(); return; }
+  const value = input.value.trim();
+  const quick = e.submitter === $('quick-publish');
+  if (!value) { input.focus(); return; }
   pending = true;
   $('error').hidden = true;
   render({ nodes: [] });
   const submit = $('submit');
   const quickButton = $('quick-publish');
-  const controls = [submit, quickButton, $('example'), ...form.elements.mode, ...Object.values(input)];
+  const controls = [submit, quickButton, $('example'), input];
   for (const el of controls) el.disabled = true;
   if (quick) quickButton.textContent = '正在解析节点…';
   else submit.firstChild.textContent = '正在转换… ';
@@ -237,12 +228,12 @@ form.addEventListener('submit', async e => {
     const response = await fetch('/api/convert', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: selection, input: value }),
+      body: JSON.stringify({ mode: 'auto', input: value }),
       signal: AbortSignal.timeout(18000),
     });
     const data = await response.json().catch(() => null);
     if (!response.ok || !data) throw new Error(data?.error || '转换暂时不可用，请稍后重试。');
-    render(data);
+    render(data, !quick);
     if (quick) {
       quickButton.textContent = '正在生成订阅…';
       await publishSubscription();
@@ -258,18 +249,16 @@ form.addEventListener('submit', async e => {
     for (const el of controls) el.disabled = false;
     quickButton.disabled = $('publish-button').disabled;
     quickButton.textContent = '一键生成订阅';
-    submit.firstChild.textContent = '转换节点 ';
+    submit.firstChild.textContent = '解析节点 ';
     pending = false;
   }
 });
 
 $('example').addEventListener('click', () => {
-  form.elements.mode.value = 'text';
-  updateMode();
-  input.text.value = [
+  input.value = [
     'vless://00000000-0000-4000-8000-000000000000@example.com:443?encryption=none&security=tls&type=tcp#VLESS%20%E7%A4%BA%E4%BE%8B',
     'trojan://demo-password@example.net:443?security=tls#Trojan%20%E7%A4%BA%E4%BE%8B',
     'ss://YWVzLTEyOC1nY206ZGVtby1wYXNzd29yZA@example.org:8388#SS%20%E7%A4%BA%E4%BE%8B',
   ].join('\n');
-  form.requestSubmit();
+  form.requestSubmit($('submit'));
 });

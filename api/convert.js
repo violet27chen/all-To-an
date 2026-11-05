@@ -23,16 +23,25 @@ export default {
       }
       body = JSON.parse(Buffer.concat(chunks).toString('utf8'));
     } catch { return json({ error: '请求格式无效。' }, 400); }
-    if (!['url', 'text'].includes(body?.mode) || typeof body.input !== 'string' || !body.input.trim()) {
+    if (!['auto', 'url', 'text'].includes(body?.mode) || typeof body.input !== 'string' || !body.input.trim()) {
       return json({ error: '请先粘贴订阅网址或内容。' }, 400);
     }
     const input = body.input.trim();
-    if (Buffer.byteLength(input) > (body.mode === 'url' ? MAX_SOURCES * (MAX_URL_LENGTH + 2) : LIMIT)) {
+    let mode = body.mode;
+    if (mode === 'auto') {
+      const lines = input.split(/\r\n|\n|\r/).map(line => line.trim()).filter(Boolean);
+      const urls = lines.filter(line => /^https?:\/\//i.test(line));
+      if (urls.length && urls.length < lines.length && lines.every(line => /^[a-z][\w+.-]*:\/\//i.test(line))) {
+        return json({ error: '请分开粘贴订阅网址和独立节点链接。' }, 422);
+      }
+      mode = urls.length === lines.length ? 'url' : 'text';
+    }
+    if (Buffer.byteLength(input) > (mode === 'url' ? MAX_SOURCES * (MAX_URL_LENGTH + 2) : LIMIT)) {
       return json({ error: '输入太长，请检查网址或分批转换。' }, 413);
     }
     try {
-      const result = body.mode === 'url' ? await aggregate(input) : convert(input);
-      const payload = JSON.stringify({ ...result, protocols });
+      const result = mode === 'url' ? await aggregate(input) : convert(input);
+      const payload = JSON.stringify({ ...result, protocols, inputType: mode });
       if (Buffer.byteLength(payload) > 4 * LIMIT) {
         return json({ error: '转换结果超过 4 MB，请分批转换。' }, 413);
       }

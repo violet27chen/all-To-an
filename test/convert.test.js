@@ -63,6 +63,25 @@ test('API returns uncached results and rejects cross-origin requests', async () 
   assert.equal((await send({ mode: 'text', input: vless }, 'https://elsewhere.example')).status, 403);
 });
 
+test('auto mode identifies URLs and supported pasted content through the same endpoint', async () => {
+  const inputs = [
+    vless,
+    Buffer.from(vless).toString('base64'),
+    'proxies:\n  - {name: Demo, type: trojan, server: edge.example, port: 443, password: sample}',
+  ];
+  for (const [index, input] of inputs.entries()) {
+    const response = await send({ mode: 'auto', input });
+    assert.equal(response.status, 200);
+    assert.equal((await response.json()).nodes[0].protocol, index === 2 ? 'trojan' : 'vless');
+  }
+  const urls = await send({ mode: 'auto', input: 'HTTP://127.0.0.1/\r\n\r\nhttps://localhost/' });
+  assert.equal(urls.status, 422);
+  assert.match((await urls.json()).error, /第 2 个：.*公网/);
+  const mixed = await send({ mode: 'auto', input: 'https://example.com/sub\n' + vless });
+  assert.equal(mixed.status, 422);
+  assert.match((await mixed.json()).error, /分开粘贴/);
+});
+
 test('URL mode blocks private and disguised loopback targets', async () => {
   for (const host of ['localhost', '2130706433', '0x7f000001', '169.254.169.254', '[::ffff:127.0.0.1]', '[fe80::1]']) {
     const response = await send({ mode: 'url', input: 'http://' + host + '/' });

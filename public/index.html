@@ -29,19 +29,12 @@
     <section class="card" aria-labelledby="input-title">
       <div class="section-top"><span class="step">01</span><h2 id="input-title">导入订阅</h2></div>
       <form id="form">
-        <fieldset>
-          <legend class="sr-only">输入方式</legend>
-          <label class="choice"><input type="radio" name="mode" value="url" checked><span>订阅网址</span></label>
-          <label class="choice"><input type="radio" name="mode" value="text"><span>订阅内容</span></label>
-        </fieldset>
-        <label class="sr-only" for="url">订阅网址</label>
-        <textarea id="url" rows="3" placeholder="每行粘贴一个订阅网址，最多 8 个" maxlength="65552" spellcheck="false" autocomplete="off" aria-describedby="hint"></textarea>
-        <label class="sr-only" for="content">订阅内容</label>
-        <textarea id="content" rows="5" placeholder="粘贴 Base64、节点链接列表或 Clash 配置…" spellcheck="false" autocomplete="off" aria-describedby="hint" hidden></textarea>
-        <p class="hint" id="hint">每行一个 HTTP / HTTPS 网址，最多 8 个。成功读取的节点会自动合并去重。</p>
+        <label class="sr-only" for="content">订阅网址或内容</label>
+        <textarea id="content" rows="5" placeholder="粘贴订阅网址、节点链接、Base64 或 Clash 配置…" spellcheck="false" autocomplete="off" aria-describedby="hint" required></textarea>
+        <p class="hint" id="hint">自动识别输入类型。多个订阅网址或节点链接请每行一个，订阅网址最多 8 个。</p>
         <div class="actions">
-          <button class="primary" type="submit" id="submit">转换节点 <span aria-hidden="true">↗</span></button>
-          <button class="quiet" type="submit" id="quick-publish" hidden>一键生成订阅</button>
+          <button class="primary" type="submit" id="submit">解析节点 <span aria-hidden="true">↗</span></button>
+          <button class="quiet" type="submit" id="quick-publish">一键生成订阅</button>
           <button class="quiet" type="button" id="example">试用示例</button>
         </div>
         <p id="error" class="error" role="alert" hidden></p>

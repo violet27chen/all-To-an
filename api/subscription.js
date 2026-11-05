@@ -12,6 +12,7 @@ const formats = {
   clash: 'application/yaml; charset=utf-8',
 };
 const pathFor = id => 'alltoan/subscriptions/' + id + '.json';
+const PROFILE_VERSION = 2;
 
 async function publish(request, filter) {
   const origin = request.headers.get('origin');
@@ -49,7 +50,7 @@ async function publish(request, filter) {
   const selectedProfiles = selectedNodes.length === nodes.length ? profiles : buildProfiles(selectedNodes);
   const id = randomBytes(24).toString('base64url');
   try {
-    await put(pathFor(id), JSON.stringify(profiles), {
+    await put(pathFor(id), JSON.stringify({ ...profiles, version: PROFILE_VERSION }), {
       token, access: 'private', contentType: 'application/json', addRandomSuffix: false,
     });
   } catch {
@@ -72,9 +73,9 @@ async function read(request, params, filter) {
     const blob = await get(pathFor(id), { token, access: 'private', useCache: false });
     if (!blob || blob.statusCode !== 200) return json({ error: invalid }, 404);
     let profiles = await new Response(blob.stream).json();
-    if (filter) {
+    if (filter || (format !== 'universal' && profiles.version !== PROFILE_VERSION)) {
       const { nodes } = convert(profiles.universal.body);
-      const selected = nodes.filter(node => filter.has(node.protocol));
+      const selected = filter ? nodes.filter(node => filter.has(node.protocol)) : nodes;
       if (!selected.length) return json({ error: '没有符合筛选条件的节点。' }, 404);
       profiles = buildProfiles(selected);
     }
