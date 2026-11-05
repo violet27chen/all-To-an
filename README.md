@@ -16,7 +16,7 @@
 
 ### 生成新订阅
 
-部署者[启用新订阅发布](#启用新订阅发布)后，在结果下方输入发布密钥，点击「生成订阅链接」，再按客户端选择格式。
+部署者[启用新订阅发布](#启用新订阅发布)后，任何访客都可以在结果下方点击「生成订阅链接」，再按客户端选择格式。
 
 | 客户端或格式 | 包含的节点 | 怎么导入 |
 | --- | --- | --- |
@@ -39,8 +39,8 @@
 ### 启用新订阅发布
 
 1. 在 Vercel 项目的 **Storage** 中创建并连接 **Private Blob**。环境变量前缀保留 `BLOB`，勾选 **Add a read-write token env var to this connection**。[Vercel 私有 Blob 文档](https://vercel.com/docs/vercel-blob/private-storage)
-2. 在 **Settings → Environment Variables** 确认 Production 有 `BLOB_READ_WRITE_TOKEN`，再新增 `SUBSCRIPTION_PUBLISH_KEY`。发布密钥可用随机 UUID v4，直接填写，无需引号。
-3. 重新部署。网页上填写自己设置的发布密钥，客户端只需生成的订阅地址。客户端必须能直接访问部署域名，无法通过 Vercel 登录保护拉取订阅。
+2. 在 **Settings → Environment Variables** 确认 Production 有 `BLOB_READ_WRITE_TOKEN`。之前设置的 `SUBSCRIPTION_PUBLISH_KEY` 可以删除。
+3. 重新部署。访客可以直接生成订阅。部署域名须允许访客和客户端直接访问。
 
 ## 本地运行
 

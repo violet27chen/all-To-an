@@ -152,10 +152,7 @@ $('publish-form').addEventListener('submit', async event => {
   try {
     const response = await fetch('/api/subscription', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'text/plain; charset=utf-8',
-        Authorization: 'Bearer ' + $('publish-key').value.trim(),
-      },
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
       body: allLinks(),
       signal: AbortSignal.timeout(18000),
     });

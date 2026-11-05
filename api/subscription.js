@@ -1,4 +1,4 @@
-import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { get, put } from '@vercel/blob';
 import { convert } from '../lib/convert.js';
 import { buildProfiles } from '../lib/profiles.js';
@@ -11,18 +11,13 @@ const formats = {
   verge: 'application/yaml; charset=utf-8',
   clash: 'application/yaml; charset=utf-8',
 };
-const hash = value => createHash('sha256').update(value).digest();
 const pathFor = id => 'alltoan/subscriptions/' + id + '.json';
 
 async function publish(request) {
   const origin = request.headers.get('origin');
   if (origin && origin !== new URL(request.url).origin) return json({ error: '请在本站页面生成订阅。' }, 403);
   const token = process.env.BLOB_READ_WRITE_TOKEN;
-  const key = process.env.SUBSCRIPTION_PUBLISH_KEY;
-  if (!token || !key) return json({ error: '本站尚未配置私有 Vercel Blob 和订阅发布密钥。' }, 503);
-  if (!timingSafeEqual(hash(request.headers.get('authorization') || ''), hash('Bearer ' + key))) {
-    return json({ error: '订阅发布密钥不正确。' }, 401);
-  }
+  if (!token) return json({ error: '本站尚未配置订阅存储。' }, 503);
   if (!/^text\/plain(?:\s*;|$)/i.test(request.headers.get('content-type') || '')) {
     return json({ error: '请提交节点链接文本。' }, 415);
   }
