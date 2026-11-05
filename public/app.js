@@ -3,7 +3,7 @@ const form = $('form');
 const input = { url: $('url'), text: $('content') };
 const hints = {
   url: '每行一个 HTTP / HTTPS 网址，最多 8 个。成功读取的节点会自动合并去重。',
-  text: '支持 Base64、逐行排列的节点链接及含 proxies 的 Clash YAML / JSON。',
+  text: '每行粘贴一个节点链接，可一键生成订阅。也支持 Base64 和含 proxies 的 Clash YAML / JSON。',
 };
 let nodes = [], visibleNodes = [], noticeTimer, pending = false;
 function mode() { return form.elements.mode.value; }
@@ -13,6 +13,7 @@ function updateMode() {
     el.required = !el.hidden;
   }
   $('hint').textContent = hints[mode()];
+  $('quick-publish').hidden = mode() !== 'text';
   $('error').hidden = true;
 }
 form.addEventListener('change', e => { if (e.target.name === 'mode') updateMode(); });
@@ -178,14 +179,14 @@ function showProfiles(profiles) {
   }
 }
 
-$('publish-form').addEventListener('submit', async event => {
-  event.preventDefault();
+async function publishSubscription() {
   const button = $('publish-button');
   const errorBox = $('publish-error');
   const selection = visibleNodes;
   if (button.disabled || !selection.length) return;
   errorBox.hidden = true;
   button.disabled = true;
+  $('quick-publish').disabled = true;
   button.textContent = '正在生成…';
   try {
     const endpoint = new URL('/api/subscription', location.origin);
@@ -207,21 +208,31 @@ $('publish-form').addEventListener('submit', async event => {
     errorBox.hidden = false;
   } finally {
     button.disabled = false;
+    $('quick-publish').disabled = pending;
     button.textContent = '生成订阅链接';
   }
+}
+
+$('publish-form').addEventListener('submit', event => {
+  event.preventDefault();
+  void publishSubscription();
 });
 
 form.addEventListener('submit', async e => {
   e.preventDefault();
   if (pending) return;
   const selection = mode(), value = input[selection].value.trim();
+  const quick = selection === 'text' && e.submitter === $('quick-publish');
   if (!value) { input[selection].focus(); return; }
   pending = true;
   $('error').hidden = true;
   render({ nodes: [] });
   const submit = $('submit');
-  for (const el of [submit, $('example'), ...form.elements.mode, ...Object.values(input)]) el.disabled = true;
-  submit.firstChild.textContent = '正在转换… ';
+  const quickButton = $('quick-publish');
+  const controls = [submit, quickButton, $('example'), ...form.elements.mode, ...Object.values(input)];
+  for (const el of controls) el.disabled = true;
+  if (quick) quickButton.textContent = '正在解析节点…';
+  else submit.firstChild.textContent = '正在转换… ';
   try {
     const response = await fetch('/api/convert', {
       method: 'POST',
@@ -232,13 +243,21 @@ form.addEventListener('submit', async e => {
     const data = await response.json().catch(() => null);
     if (!response.ok || !data) throw new Error(data?.error || '转换暂时不可用，请稍后重试。');
     render(data);
-    notice('已提取 ' + data.nodes.length + ' 个节点');
+    if (quick) {
+      quickButton.textContent = '正在生成订阅…';
+      await publishSubscription();
+      if (!$('subscription').hidden) $('subscription-title').focus();
+    } else {
+      notice('已提取 ' + data.nodes.length + ' 个节点');
+    }
   } catch (error) {
     $('error').textContent = error.name === 'TimeoutError' ? '请求超时，请重试或直接粘贴订阅内容。'
       : error instanceof TypeError ? '无法连接转换服务，请检查网络后重试。' : error.message;
     $('error').hidden = false;
   } finally {
-    for (const el of [submit, $('example'), ...form.elements.mode, ...Object.values(input)]) el.disabled = false;
+    for (const el of controls) el.disabled = false;
+    quickButton.disabled = $('publish-button').disabled;
+    quickButton.textContent = '一键生成订阅';
     submit.firstChild.textContent = '转换节点 ';
     pending = false;
   }

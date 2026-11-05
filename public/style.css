@@ -35,6 +35,9 @@ fieldset{border:0;padding:4px;background:#edf0e8;border-radius:9px;display:inlin
 #publish-form {
   margin-top: 12px;
 }
+.actions {
+  flex-wrap: wrap;
+}
 #profiles:empty {
   margin: 0;
 }
