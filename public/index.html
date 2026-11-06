@@ -11,7 +11,7 @@
 </head>
 <body>
   <header class="mast">
-    <div class="shell top"><a class="brand" href="/" aria-label="allToan 首页"><span class="mark">a↗</span>allToan</a><span class="edition">订阅转节点工具</span></div>
+    <div class="shell top"><a class="brand" href="/" aria-label="allToan 首页"><span class="mark">a↗</span>allToan</a><a class="edition" href="#vpncheap">VPNCheap 节点提取</a></div>
   </header>
   <main class="shell">
     <section class="hero">
@@ -47,9 +47,46 @@
         <p id="error" class="error" role="alert" hidden></p>
       </form>
     </section>
+    <section class="card vpncheap-card" id="vpncheap" aria-labelledby="vpncheap-title">
+      <div class="section-top"><span class="step">VPN</span><h2 id="vpncheap-title">VPNCheap 提取订阅节点</h2></div>
+      <p class="hint">自动使用 VPNCheap 客户端的请求头，提取 AnyTLS 和 Hysteria2 节点。</p>
+      <form id="vpncheap-url-form" class="vpncheap-form">
+        <label for="vpncheap-url">已有 VPNCheap 订阅网址</label>
+        <div class="vpncheap-input-row">
+          <input id="vpncheap-url" type="url" required maxlength="4096" autocomplete="off" spellcheck="false" placeholder="https://…">
+          <button class="primary" type="submit" id="vpncheap-extract">提取节点</button>
+        </div>
+      </form>
+      <details class="request-options">
+        <summary>用 VPNCheap 账号获取订阅</summary>
+        <p class="hint">邮箱和密码会通过本站转发给 VPNCheap，只用于当次登录。已有订阅网址时可直接用上方入口。</p>
+        <form id="vpncheap-login-form" class="vpncheap-form">
+          <div class="vpncheap-fields">
+            <label for="vpncheap-email">账号邮箱<input id="vpncheap-email" type="email" required maxlength="254" autocomplete="username"></label>
+            <label for="vpncheap-password">账号密码<input id="vpncheap-password" type="password" required maxlength="512" autocomplete="current-password"></label>
+          </div>
+          <button class="quiet" type="submit" id="vpncheap-login">登录并提取节点</button>
+        </form>
+      </details>
+      <div id="vpncheap-details" class="vpncheap-details" hidden>
+        <label for="vpncheap-source">原订阅地址</label>
+        <input id="vpncheap-source" type="text" readonly spellcheck="false">
+        <details class="request-options">
+          <summary>查看抓取请求头</summary>
+          <pre id="vpncheap-headers"></pre>
+        </details>
+        <div class="actions">
+          <button class="quiet" type="button" id="vpncheap-copy-url">复制网址</button>
+          <button class="quiet" type="button" id="vpncheap-copy-curl">复制 cURL</button>
+          <button class="quiet" type="button" id="vpncheap-yaml" hidden>下载全部 Clash YAML</button>
+        </div>
+      </div>
+      <p id="vpncheap-status" class="hint" role="status"></p>
+      <p id="vpncheap-error" class="error" role="alert" hidden></p>
+    </section>
     <section class="card results" aria-labelledby="result-title" id="results">
       <div class="result-head">
-        <div class="section-top"><span class="step">02</span><h2 id="result-title">节点结果</h2><span id="count" class="count" hidden></span></div>
+        <div class="section-top"><span class="step">02</span><h2 id="result-title" tabindex="-1">节点结果</h2><span id="count" class="count" hidden></span></div>
         <div class="result-actions" id="result-actions" hidden><button class="quiet" type="button" id="download">下载 TXT</button><button class="primary compact" type="button" id="copy-all">复制全部</button></div>
       </div>
       <p id="note" class="hint" hidden></p>

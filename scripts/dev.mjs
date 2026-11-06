@@ -3,6 +3,7 @@ import { Readable } from 'node:stream';
 import { readFile } from 'node:fs/promises';
 import endpoint from '../api/convert.js';
 import subscription from '../api/subscription.js';
+import vpncheap from '../api/vpncheap.js';
 
 const host = '127.0.0.1';
 const port = Number(process.env.PORT || 3000);
@@ -13,12 +14,13 @@ const assets = {
   '/style.css': ['style.css', 'text/css; charset=utf-8'],
   '/favicon.svg': ['favicon.svg', 'image/svg+xml'],
 };
+const api = { '/api/convert': endpoint, '/api/subscription': subscription, '/api/vpncheap': vpncheap };
 createServer(async (req, res) => {
   try {
     if (req.headers.host !== host + ':' + port) return res.writeHead(403).end();
     const url = new URL(base + req.url);
-    if (url.pathname === '/api/convert' || url.pathname === '/api/subscription') {
-      const handler = url.pathname === '/api/convert' ? endpoint : subscription;
+    if (Object.hasOwn(api, url.pathname)) {
+      const handler = api[url.pathname];
       const response = await handler.fetch(new Request(url, {
         method: req.method, headers: req.headers,
         ...(['GET', 'HEAD'].includes(req.method) ? {} : { body: Readable.toWeb(req), duplex: 'half' }),

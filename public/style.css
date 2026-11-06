@@ -38,6 +38,50 @@ textarea{width:100%;display:block;color:var(--ink);background:#fbfcf7;border:1px
 .actions {
   flex-wrap: wrap;
 }
+.vpncheap-form,
+.vpncheap-details {
+  margin-top: 12px;
+}
+.vpncheap-form label,
+.vpncheap-details label {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+}
+.vpncheap-input-row,
+.vpncheap-fields {
+  display: grid;
+  gap: 8px;
+  margin: 5px 0 8px;
+}
+.vpncheap-input-row {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.vpncheap-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.vpncheap-card input,
+.vpncheap-card pre {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--paper);
+  font: 13px/1.45 var(--mono);
+}
+.vpncheap-fields input,
+.vpncheap-details input {
+  margin-top: 4px;
+}
+.vpncheap-card pre {
+  overflow: auto;
+}
+@media (max-width: 520px) {
+  .vpncheap-fields {
+    grid-template-columns: 1fr;
+  }
+}
 .request-options {
   margin-top: 12px;
 }

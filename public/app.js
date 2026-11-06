@@ -34,13 +34,16 @@ async function copy(text, message) {
 }
 const links = list => list.map(node => node.link).join('\n');
 $('copy-all').addEventListener('click', () => copy(links(visibleNodes), '已复制 ' + visibleNodes.length + ' 个节点'));
-$('download').addEventListener('click', () => {
-  const url = URL.createObjectURL(new Blob([links(visibleNodes) + '\n'], { type: 'text/plain;charset=utf-8' }));
+function downloadFile(content, type, filename) {
+  const url = URL.createObjectURL(new Blob([content], { type }));
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'allToan-nodes.txt';
+  anchor.download = filename;
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+$('download').addEventListener('click', () => {
+  downloadFile(links(visibleNodes) + '\n', 'text/plain;charset=utf-8', 'allToan-nodes.txt');
 });
 function render(data, previewNodes = false, source = null) {
   nodes = data.nodes;
@@ -271,35 +274,47 @@ $('publish-form').addEventListener('submit', event => {
   void publishSubscription();
 });
 
-form.addEventListener('submit', async e => {
-  e.preventDefault();
+const vpncheapControls = ['vpncheap-url', 'vpncheap-extract', 'vpncheap-email', 'vpncheap-password', 'vpncheap-login'].map($);
+let vpncheapCurl = '', vpncheapYaml = '';
+
+async function postJson(url, payload) {
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(18000),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data) throw new Error(data?.error || '请求暂时不可用，请稍后重试。');
+  return data;
+}
+
+async function runConversion(getSource, { quick = false, provider = false } = {}) {
   if (pending) return;
-  const value = input.value.trim();
   const headerInput = $('request-headers');
   const sourceInput = $('header-source');
-  const headerText = headerInput.value.trim();
-  const headerSource = headerText ? Number(sourceInput.value || 1) : 1;
-  const quick = e.submitter === $('quick-publish');
-  if (!value) { input.focus(); return; }
+  const status = $('vpncheap-status');
+  const errorBox = $(provider ? 'vpncheap-error' : 'error');
   pending = true;
-  $('error').hidden = true;
+  errorBox.hidden = true;
   render({ nodes: [] });
   const submit = $('submit');
   const quickButton = $('quick-publish');
-  const controls = [submit, quickButton, input, headerInput, sourceInput];
+  const controls = [submit, quickButton, input, headerInput, sourceInput, ...vpncheapControls];
   for (const el of controls) el.disabled = true;
-  if (quick) quickButton.textContent = '正在解析节点…';
+  if (provider) status.textContent = '正在读取 VPNCheap 订阅…';
+  else if (quick) quickButton.textContent = '正在解析节点…';
   else submit.firstChild.textContent = '正在转换… ';
   try {
-    const response = await fetch('/api/convert', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'auto', input: value, headerText, headerSource }),
-      signal: AbortSignal.timeout(18000),
-    });
-    const data = await response.json().catch(() => null);
-    if (!response.ok || !data) throw new Error(data?.error || '转换暂时不可用，请稍后重试。');
-    render(data, !quick, { input: value, headerText, headerSource });
+    const source = await getSource();
+    const data = await postJson('/api/convert', { mode: 'auto', ...source, exportVerge: provider });
+    render(data, !quick, source);
+    if (provider) {
+      vpncheapYaml = data.verge?.body || '';
+      $('vpncheap-yaml').hidden = !vpncheapYaml;
+      status.textContent = '已提取 ' + data.nodes.length + ' 个节点。';
+      $('result-title').focus();
+    }
     if (quick) {
       quickButton.textContent = '正在生成订阅…';
       await publishSubscription();
@@ -308,9 +323,10 @@ form.addEventListener('submit', async e => {
       notice('已提取 ' + data.nodes.length + ' 个节点');
     }
   } catch (error) {
-    $('error').textContent = error.name === 'TimeoutError' ? '请求超时，请重试或直接粘贴订阅内容。'
+    if (provider) status.textContent = '';
+    errorBox.textContent = error.name === 'TimeoutError' ? '请求超时，请稍后重试。'
       : error instanceof TypeError ? '无法连接转换服务，请检查网络后重试。' : error.message;
-    $('error').hidden = false;
+    errorBox.hidden = false;
   } finally {
     for (const el of controls) el.disabled = false;
     quickButton.disabled = $('publish-button').disabled;
@@ -318,4 +334,46 @@ form.addEventListener('submit', async e => {
     submit.firstChild.textContent = '解析节点 ';
     pending = false;
   }
+}
+
+form.addEventListener('submit', event => {
+  event.preventDefault();
+  const value = input.value.trim();
+  if (!value) { input.focus(); return; }
+  const headerText = $('request-headers').value.trim();
+  const headerSource = headerText ? Number($('header-source').value || 1) : 1;
+  void runConversion(() => ({ input: value, headerText, headerSource }), { quick: event.submitter === $('quick-publish') });
+});
+
+function extractVpncheap(credentials) {
+  return runConversion(async () => {
+    vpncheapCurl = vpncheapYaml = '';
+    $('vpncheap-source').value = '';
+    $('vpncheap-details').hidden = true;
+    $('vpncheap-yaml').hidden = true;
+    const { input, headerText, headerSource, curl } = await postJson('/api/vpncheap', credentials);
+    $('vpncheap-source').value = input;
+    $('vpncheap-url').value = input;
+    $('vpncheap-headers').textContent = headerText;
+    $('vpncheap-details').hidden = false;
+    vpncheapCurl = curl;
+    return { input, headerText, headerSource };
+  }, { provider: true });
+}
+
+$('vpncheap-url-form').addEventListener('submit', event => {
+  event.preventDefault();
+  void extractVpncheap({ url: $('vpncheap-url').value.trim() });
+});
+$('vpncheap-login-form').addEventListener('submit', event => {
+  event.preventDefault();
+  if (pending) return;
+  const password = $('vpncheap-password').value;
+  $('vpncheap-password').value = '';
+  void extractVpncheap({ email: $('vpncheap-email').value.trim(), password });
+});
+$('vpncheap-copy-url').addEventListener('click', () => copy($('vpncheap-source').value, '已复制原订阅网址'));
+$('vpncheap-copy-curl').addEventListener('click', () => copy(vpncheapCurl, '已复制 cURL 命令'));
+$('vpncheap-yaml').addEventListener('click', () => {
+  if (vpncheapYaml) downloadFile(vpncheapYaml, 'application/yaml;charset=utf-8', 'vpncheap-clash-verge.yaml');
 });

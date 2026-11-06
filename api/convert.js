@@ -1,6 +1,7 @@
 import { convert, protocols } from '../lib/convert.js';
 import { aggregate, inputLines, isSubscriptionUrl, MAX_SOURCES, MAX_URL_LENGTH } from '../lib/aggregate.js';
 import { LIMIT } from '../lib/subscription.js';
+import { buildProfiles } from '../lib/profiles.js';
 
 const headers = { 'Cache-Control': 'no-store' };
 const json = (body, status = 200) => Response.json(body, { status, headers });
@@ -49,7 +50,8 @@ export default {
       const result = mode === 'text' ? convert(input) : await aggregate(input, {
         includeNodes: mode === 'mixed', headerText, headerSource,
       });
-      const payload = JSON.stringify({ ...result, protocols, inputType: mode });
+      const verge = body.exportVerge === true ? buildProfiles(result.nodes).verge : undefined;
+      const payload = JSON.stringify({ ...result, protocols, inputType: mode, verge });
       if (Buffer.byteLength(payload) > 4 * LIMIT) {
         return json({ error: '转换结果超过 4 MB，请分批转换。' }, 413);
       }
