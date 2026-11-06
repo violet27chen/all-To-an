@@ -2,6 +2,7 @@ const $ = id => document.getElementById(id);
 const form = $('form');
 const input = $('content');
 let nodes = [], visibleNodes = [], showNodeList = false, editingNodes = false, noticeTimer, pending = false;
+let liveSource = null;
 const removedNodes = new Set();
 const retainedNodes = () => nodes.filter(node => !removedNodes.has(node.link));
 input.addEventListener('input', () => { $('error').hidden = true; });
@@ -41,8 +42,12 @@ $('download').addEventListener('click', () => {
   anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 });
-function render(data, previewNodes = false) {
+function render(data, previewNodes = false, source = null) {
   nodes = data.nodes;
+  liveSource = data.inputType === 'url' || data.inputType === 'mixed' ? source : null;
+  $('refresh-hint').textContent = liveSource
+    ? '客户端刷新时会用解析时的原订阅网址和请求头重新抓取。抓取失败时使用生成时保存的节点。'
+    : '客户端读取的是本次生成时保存的节点。';
   removedNodes.clear();
   editingNodes = false;
   showNodeList = previewNodes && data.inputType === 'url';
@@ -234,10 +239,15 @@ async function publishSubscription() {
     const retained = retainedNodes();
     const endpoint = new URL('/api/subscription', location.origin);
     if (selection.length !== retained.length) endpoint.searchParams.set('protocols', selectedProtocols().join(','));
+    const nodeText = links(retained);
+    const body = liveSource ? JSON.stringify({
+      nodes: nodeText,
+      source: { ...liveSource, removed: [...removedNodes] },
+    }) : nodeText;
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
-      body: links(retained),
+      headers: { 'Content-Type': liveSource ? 'application/json' : 'text/plain; charset=utf-8' },
+      body,
       signal: AbortSignal.timeout(18000),
     });
     const data = await response.json().catch(() => null);
@@ -289,7 +299,7 @@ form.addEventListener('submit', async e => {
     });
     const data = await response.json().catch(() => null);
     if (!response.ok || !data) throw new Error(data?.error || '转换暂时不可用，请稍后重试。');
-    render(data, !quick);
+    render(data, !quick, { input: value, headerText, headerSource });
     if (quick) {
       quickButton.textContent = '正在生成订阅…';
       await publishSubscription();
