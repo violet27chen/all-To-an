@@ -30,8 +30,8 @@
       <div class="section-top"><span class="step">01</span><h2 id="input-title">导入订阅</h2></div>
       <form id="form">
         <label class="sr-only" for="content">订阅网址或内容</label>
-        <textarea id="content" rows="5" placeholder="粘贴订阅网址、节点链接、Base64 或 Clash 配置…" spellcheck="false" autocomplete="off" aria-describedby="hint" required></textarea>
-        <p class="hint" id="hint">订阅网址和节点链接可以混贴，每行一个，订阅网址最多 8 个。也可直接粘贴 Base64 或 Clash 配置。</p>
+        <textarea id="content" rows="5" placeholder="粘贴订阅网址、节点链接、Base64 或配置…" spellcheck="false" autocomplete="off" aria-describedby="hint" required></textarea>
+        <p class="hint" id="hint">订阅网址和节点链接可以混贴，每行一个，订阅网址最多 8 个。也可粘贴 Base64、Clash 配置或受支持的 sing-box JSON。</p>
         <details class="request-options">
           <summary>自定义请求头</summary>
           <label for="header-source">应用到第几个订阅网址</label>
@@ -87,6 +87,8 @@
         <dd>从纯文本或 Base64 订阅中逐条提取，保留原协议和参数。支持 <code>vless://</code>、<code>vmess://</code>、<code>trojan://</code>、<code>ss://</code>（Shadowsocks）、<code>ssr://</code>、<code>hysteria://</code>、<code>hysteria2://</code>（含 <code>hy2://</code>）、<code>tuic://</code>、<code>anytls://</code>、<code>socks://</code>、<code>socks5://</code> 和 <code>wireguard://</code>。</dd>
         <dt>从 Clash 配置生成链接</dt>
         <dd>读取 YAML 或 JSON 的 <code>proxies</code>，支持常见的 VLESS、VMess、Trojan、Shadowsocks、Hysteria2 和 TUIC 配置。无法转换的条目会跳过，结果区会显示数量。</dd>
+        <dt>从 sing-box 配置生成链接</dt>
+        <dd>支持 JSON 中带常规 TLS 设置的 AnyTLS 和 Hysteria2 出站。</dd>
       </dl>
     </details>
     <p id="notice" class="toast" role="status"></p>

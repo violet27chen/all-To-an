@@ -27,6 +27,12 @@ X-Client-Encrypt: v1
 
 选择这些请求头应用到第几个订阅网址，默认是第一个。计数时跳过独立节点链接和重复网址。只填写请求头即可，`Host` 由网址决定，跨域跳转时不会传递自定义请求头。响应仍需是项目支持的订阅格式。
 
+#### VPNCheap 加密订阅
+
+VPNCheap 的 `flag=sing-box` 订阅可用原网址和原客户端请求头抓取。若响应标记为加密，部署者需在 Vercel 的 Production 环境变量中设置 `VPNCHEAP_SUBSCRIPTION_SECRET`，值为官方 Windows 客户端元数据中的 `SubEncryptKey`，保存后重新部署。密钥只在服务器端用于解密。
+
+默认只对已支持的 VPNCheap HTTPS 订阅域名解密。若服务商更换域名，部署者可将 `VPNCHEAP_SUBSCRIPTION_ORIGIN` 设置为新的 HTTPS 源（只填协议和域名，不含路径）。解密成功后，AnyTLS 和 Hysteria2 出站可正常解析和生成动态订阅。
+
 ### 生成新订阅
 
 部署者[启用新订阅发布](#启用新订阅发布)后，任何访客都可以在结果下方点击「生成订阅链接」，再按客户端选择格式。新链接会应用当前筛选条件。
@@ -80,6 +86,7 @@ npm run dev
 | --- | --- |
 | 节点列表或 Base64 文本 | 保留原协议和参数。支持 `vless://`、`vmess://`、`trojan://`、`ss://`、`ssr://`、`hysteria://`、`hysteria2://`、`hy2://`、`tuic://`、`anytls://`、`socks://`、`socks5://`、`wireguard://`。 |
 | Clash YAML / JSON | 读取 `proxies`，转换常见的 VLESS、VMess、Trojan、Shadowsocks、Hysteria2 和 TUIC 配置。部分客户端专属设置无法用分享链接表达。 |
+| sing-box JSON | 读取 `outbounds`，转换带常规 TLS 设置的 AnyTLS 和 Hysteria2 出站。 |
 
 转换结果不代表节点可连通。
 
