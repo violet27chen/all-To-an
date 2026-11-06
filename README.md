@@ -29,7 +29,7 @@ X-Client-Encrypt: v1
 
 #### VPNCheap 加密订阅
 
-主页的「VPNCheap 提取订阅节点」支持直接粘贴 VPNCheap 订阅网址，也可用账号获取网址并提取。页面会自动使用 `flag=sing-box` 和客户端请求头。提取后可复制原网址或 cURL 命令、下载全部 Clash YAML，或在节点结果区筛选、下载 TXT 和生成动态订阅。账号密码只用于当次向 VPNCheap 登录。
+主页的「VPNCheap 提取订阅节点」支持直接粘贴 VPNCheap 订阅网址，也可用账号获取网址并提取。页面会自动使用 `flag=sing-box` 和客户端请求头，并在提取后直接显示新生成的动态订阅地址。也可复制回源 cURL、下载全部 Clash YAML，或在节点结果区筛选、下载 TXT 和重新生成订阅。账号密码只用于当次向 VPNCheap 登录。
 
 若响应标记为加密，部署者需在 Vercel 的 Production 环境变量中设置 `VPNCHEAP_SUBSCRIPTION_SECRET`，值为官方 Windows 客户端元数据中的 `SubEncryptKey`，保存后重新部署。密钥只在服务器端用于解密。
 

@@ -3,6 +3,7 @@ const form = $('form');
 const input = $('content');
 let nodes = [], visibleNodes = [], showNodeList = false, editingNodes = false, noticeTimer, pending = false;
 let liveSource = null;
+let providerResult = false;
 const removedNodes = new Set();
 const retainedNodes = () => nodes.filter(node => !removedNodes.has(node.link));
 input.addEventListener('input', () => { $('error').hidden = true; });
@@ -45,8 +46,9 @@ function downloadFile(content, type, filename) {
 $('download').addEventListener('click', () => {
   downloadFile(links(visibleNodes) + '\n', 'text/plain;charset=utf-8', 'allToan-nodes.txt');
 });
-function render(data, previewNodes = false, source = null) {
+function render(data, previewNodes = false, source = null, provider = false) {
   nodes = data.nodes;
+  providerResult = provider;
   liveSource = data.inputType === 'url' || data.inputType === 'mixed' ? source : null;
   $('refresh-hint').textContent = liveSource
     ? '客户端刷新时会用原订阅网址和请求头重新抓取。抓取失败或没有可用节点时，使用最近成功保存的结果。'
@@ -189,6 +191,16 @@ const profileLabels = {
 };
 
 function showProfiles(profiles) {
+  if (providerResult) {
+    const format = profiles.verge?.path ? 'verge' : 'universal';
+    const path = profiles[format]?.path;
+    if (path) {
+      $('vpncheap-new-label').textContent = '新订阅地址（' + profileLabels[format] + '）';
+      $('vpncheap-new-url').value = new URL(path, location.origin).href;
+      $('vpncheap-generated').hidden = false;
+      $('vpncheap-copy-url').hidden = false;
+    }
+  }
   const list = $('profiles');
   list.replaceChildren();
   for (const [format, label] of Object.entries(profileLabels)) {
@@ -229,14 +241,14 @@ function showProfiles(profiles) {
   }
 }
 
-async function publishSubscription() {
+async function publishSubscription(errorBox = $('publish-error')) {
   const button = $('publish-button');
-  const errorBox = $('publish-error');
   const selection = visibleNodes;
   if (button.disabled || !selection.length) return;
+  const submitButtons = ['submit', 'quick-publish', 'vpncheap-extract', 'vpncheap-login'].map($);
   errorBox.hidden = true;
   button.disabled = true;
-  $('quick-publish').disabled = true;
+  for (const submit of submitButtons) submit.disabled = true;
   button.textContent = '正在生成…';
   try {
     const retained = retainedNodes();
@@ -258,13 +270,14 @@ async function publishSubscription() {
     if (visibleNodes !== selection) return;
     showProfiles(data);
     notice('已生成新订阅地址');
+    return true;
   } catch (error) {
     if (visibleNodes !== selection) return;
     errorBox.textContent = error.name === 'TimeoutError' ? '生成订阅超时，请稍后重试。' : error.message;
     errorBox.hidden = false;
   } finally {
     button.disabled = false;
-    $('quick-publish').disabled = pending;
+    for (const submit of submitButtons) submit.disabled = pending;
     button.textContent = '生成订阅链接';
   }
 }
@@ -308,14 +321,15 @@ async function runConversion(getSource, { quick = false, provider = false } = {}
   try {
     const source = await getSource();
     const data = await postJson('/api/convert', { mode: 'auto', ...source, exportVerge: provider });
-    render(data, !quick, source);
+    render(data, !quick, source, provider);
     if (provider) {
       vpncheapYaml = data.verge?.body || '';
       $('vpncheap-yaml').hidden = !vpncheapYaml;
+      status.textContent = '已提取 ' + data.nodes.length + ' 个节点，正在生成订阅…';
+      const published = await publishSubscription(errorBox);
       status.textContent = '已提取 ' + data.nodes.length + ' 个节点。';
-      $('result-title').focus();
-    }
-    if (quick) {
+      if (published) $('vpncheap-new-url').focus();
+    } else if (quick) {
       quickButton.textContent = '正在生成订阅…';
       await publishSubscription();
       if (!$('subscription').hidden) $('subscription-title').focus();
@@ -348,11 +362,12 @@ form.addEventListener('submit', event => {
 function extractVpncheap(credentials) {
   return runConversion(async () => {
     vpncheapCurl = vpncheapYaml = '';
-    $('vpncheap-source').value = '';
+    $('vpncheap-new-url').value = '';
+    $('vpncheap-generated').hidden = true;
+    $('vpncheap-copy-url').hidden = true;
     $('vpncheap-details').hidden = true;
     $('vpncheap-yaml').hidden = true;
     const { input, headerText, headerSource, curl } = await postJson('/api/vpncheap', credentials);
-    $('vpncheap-source').value = input;
     $('vpncheap-url').value = input;
     $('vpncheap-headers').textContent = headerText;
     $('vpncheap-details').hidden = false;
@@ -372,7 +387,7 @@ $('vpncheap-login-form').addEventListener('submit', event => {
   $('vpncheap-password').value = '';
   void extractVpncheap({ email: $('vpncheap-email').value.trim(), password });
 });
-$('vpncheap-copy-url').addEventListener('click', () => copy($('vpncheap-source').value, '已复制原订阅网址'));
+$('vpncheap-copy-url').addEventListener('click', () => copy($('vpncheap-new-url').value, '已复制新订阅地址'));
 $('vpncheap-copy-curl').addEventListener('click', () => copy(vpncheapCurl, '已复制 cURL 命令'));
 $('vpncheap-yaml').addEventListener('click', () => {
   if (vpncheapYaml) downloadFile(vpncheapYaml, 'application/yaml;charset=utf-8', 'vpncheap-clash-verge.yaml');
