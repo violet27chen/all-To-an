@@ -15,6 +15,7 @@ const formats = {
 const pathFor = id => 'alltoan/subscriptions/' + id + '.json';
 const PROFILE_VERSION = 2;
 const MAX_OUTPUT = 4 * 1024 * 1024;
+const fitsOutputLimit = profile => Buffer.byteLength(profile.body) <= MAX_OUTPUT;
 
 async function publish(request, filter) {
   const origin = request.headers.get('origin');
@@ -60,10 +61,8 @@ async function publish(request, filter) {
   }
 
   const profiles = buildProfiles(nodes);
-  for (const profile of Object.values(profiles)) {
-    if (Buffer.byteLength(profile.body) > MAX_OUTPUT) {
-      return json({ error: '生成的订阅内容超过 4 MB，请分批发布。' }, 413);
-    }
+  if (!Object.values(profiles).every(fitsOutputLimit)) {
+    return json({ error: '生成的订阅内容超过 4 MB，请分批发布。' }, 413);
   }
   const selectedNodes = filter ? nodes.filter(node => filter.has(node.protocol)) : nodes;
   if (!selectedNodes.length) return json({ error: '没有符合筛选条件的节点。' }, 422);
@@ -83,11 +82,33 @@ async function publish(request, filter) {
   })), 201);
 }
 
-function selectProfile(saved, format, filter, freshNodes) {
-  if (!freshNodes && !filter && (format === 'universal' || saved.version === PROFILE_VERSION)) return saved[format];
-  const nodes = freshNodes || convert(saved.universal.body).nodes;
+function selectProfile(saved, format, filter) {
+  if (!filter && (format === 'universal' || saved.version === PROFILE_VERSION)) return saved[format];
+  const { nodes } = convert(saved.universal.body);
   const selected = filter ? nodes.filter(node => filter.has(node.protocol)) : nodes;
   return selected.length ? buildProfiles(selected)[format] : null;
+}
+
+async function refreshAndSave(saved, format, filter, { path, token, etag }) {
+  const nodes = await refreshLiveSource(saved.source);
+  if (!nodes?.length) return null;
+  const profiles = buildProfiles(nodes);
+  if (!Object.values(profiles).every(fitsOutputLimit)) return null;
+  const refreshed = { ...profiles, version: PROFILE_VERSION, source: saved.source };
+  const profile = selectProfile(refreshed, format, filter);
+  if (!profile?.count || !fitsOutputLimit(profile)) return null;
+
+  if (etag && (saved.version !== PROFILE_VERSION || saved.universal.body !== refreshed.universal.body)) {
+    try {
+      await put(path, JSON.stringify(refreshed), {
+        token, access: 'private', contentType: 'application/json', addRandomSuffix: false,
+        allowOverwrite: true, ifMatch: etag, abortSignal: AbortSignal.timeout(2000),
+      });
+    } catch {
+      // Concurrent refreshes and storage errors must not discard the fresh response.
+    }
+  }
+  return profile;
 }
 
 async function read(request, params, filter) {
@@ -97,20 +118,17 @@ async function read(request, params, filter) {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   if (!token) return json({ error: '订阅存储暂不可用。' }, 503);
   try {
-    const blob = await get(pathFor(id), { token, access: 'private', useCache: false });
+    const path = pathFor(id);
+    const blob = await get(path, { token, access: 'private', useCache: false });
     if (!blob || blob.statusCode !== 200) return json({ error: invalid }, 404);
     const saved = await new Response(blob.stream).json();
-    let freshNodes, refreshStatus;
+    let profile, refreshStatus;
     if (saved.source && request.method === 'GET') {
-      try { freshNodes = await refreshLiveSource(saved.source); }
-      catch { /* keep the saved profile when upstream is unavailable */ }
-      refreshStatus = freshNodes ? 'live' : 'fallback';
+      try { profile = await refreshAndSave(saved, format, filter, { path, token, etag: blob.blob.etag }); }
+      catch { /* keep the most recent complete subscription when upstream fails */ }
+      refreshStatus = profile ? 'live' : 'fallback';
     }
-    let profile = selectProfile(saved, format, filter, freshNodes);
-    if (freshNodes && profile && Buffer.byteLength(profile.body) > MAX_OUTPUT) {
-      refreshStatus = 'fallback';
-      profile = selectProfile(saved, format, filter);
-    }
+    profile ??= selectProfile(saved, format, filter);
     if (!profile?.count) return json({ error: profile === null ? '没有符合筛选条件的节点。' : '该格式没有可用节点。' }, 404);
     return new Response(request.method === 'HEAD' ? null : profile.body, {
       headers: {

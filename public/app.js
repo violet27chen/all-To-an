@@ -46,7 +46,7 @@ function render(data, previewNodes = false, source = null) {
   nodes = data.nodes;
   liveSource = data.inputType === 'url' || data.inputType === 'mixed' ? source : null;
   $('refresh-hint').textContent = liveSource
-    ? '客户端刷新时会用解析时的原订阅网址和请求头重新抓取。抓取失败时使用生成时保存的节点。'
+    ? '客户端刷新时会用原订阅网址和请求头重新抓取。抓取失败或没有可用节点时，使用最近成功保存的结果。'
     : '客户端读取的是本次生成时保存的节点。';
   removedNodes.clear();
   editingNodes = false;
