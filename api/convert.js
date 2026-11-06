@@ -27,6 +27,10 @@ export default {
       return json({ error: '请先粘贴订阅网址或内容。' }, 400);
     }
     const input = body.input.trim();
+    const { headerText = '', headerSource = 1 } = body;
+    if (typeof headerText !== 'string' || !Number.isInteger(headerSource) || headerSource < 1 || headerSource > MAX_SOURCES) {
+      return json({ error: '自定义请求头设置无效。' }, 400);
+    }
     let mode = body.mode;
     if (mode === 'auto') {
       const lines = inputLines(input);
@@ -38,8 +42,13 @@ export default {
     if (Buffer.byteLength(input) > (mode === 'url' ? MAX_SOURCES * (MAX_URL_LENGTH + 2) : LIMIT)) {
       return json({ error: '输入太长，请检查网址或分批转换。' }, 413);
     }
+    if (mode === 'text' && headerText.trim()) {
+      return json({ error: '自定义请求头需要与 HTTP / HTTPS 订阅网址一起使用。' }, 422);
+    }
     try {
-      const result = mode === 'text' ? convert(input) : await aggregate(input, { includeNodes: mode === 'mixed' });
+      const result = mode === 'text' ? convert(input) : await aggregate(input, {
+        includeNodes: mode === 'mixed', headerText, headerSource,
+      });
       const payload = JSON.stringify({ ...result, protocols, inputType: mode });
       if (Buffer.byteLength(payload) > 4 * LIMIT) {
         return json({ error: '转换结果超过 4 MB，请分批转换。' }, 413);

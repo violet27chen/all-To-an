@@ -38,6 +38,30 @@ textarea{width:100%;display:block;color:var(--ink);background:#fbfcf7;border:1px
 .actions {
   flex-wrap: wrap;
 }
+.request-options {
+  margin-top: 12px;
+}
+.request-options summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.request-options label:not(.sr-only) {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 13px;
+}
+#header-source {
+  width: 4em;
+  margin-left: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+#request-headers {
+  margin-top: 8px;
+  min-height: 88px;
+}
 .node-management {
   flex-wrap: wrap;
   margin: 12px 0;

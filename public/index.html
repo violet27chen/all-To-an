@@ -32,6 +32,14 @@
         <label class="sr-only" for="content">订阅网址或内容</label>
         <textarea id="content" rows="5" placeholder="粘贴订阅网址、节点链接、Base64 或 Clash 配置…" spellcheck="false" autocomplete="off" aria-describedby="hint" required></textarea>
         <p class="hint" id="hint">订阅网址和节点链接可以混贴，每行一个，订阅网址最多 8 个。也可直接粘贴 Base64 或 Clash 配置。</p>
+        <details class="request-options">
+          <summary>自定义请求头</summary>
+          <label for="header-source">应用到第几个订阅网址</label>
+          <input id="header-source" type="number" min="1" max="8" step="1" value="1" aria-describedby="header-hint">
+          <label class="sr-only" for="request-headers">请求头，每行一个</label>
+          <textarea id="request-headers" rows="3" maxlength="4096" spellcheck="false" autocomplete="off" aria-describedby="header-hint" placeholder="User-Agent: my-client/1.0&#10;Content-Language: zh-CN&#10;X-Client-Encrypt: v1"></textarea>
+          <p id="header-hint" class="hint">每行填写一个「名称: 值」。网址按去重后的顺序计数，独立节点链接不计入。Host 由所选网址决定。</p>
+        </details>
         <div class="actions">
           <button class="primary" type="submit" id="submit">解析节点 <span aria-hidden="true">↗</span></button>
           <button class="quiet" type="submit" id="quick-publish">一键生成订阅</button>

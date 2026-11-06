@@ -265,6 +265,10 @@ form.addEventListener('submit', async e => {
   e.preventDefault();
   if (pending) return;
   const value = input.value.trim();
+  const headerInput = $('request-headers');
+  const sourceInput = $('header-source');
+  const headerText = headerInput.value.trim();
+  const headerSource = headerText ? Number(sourceInput.value || 1) : 1;
   const quick = e.submitter === $('quick-publish');
   if (!value) { input.focus(); return; }
   pending = true;
@@ -272,7 +276,7 @@ form.addEventListener('submit', async e => {
   render({ nodes: [] });
   const submit = $('submit');
   const quickButton = $('quick-publish');
-  const controls = [submit, quickButton, input];
+  const controls = [submit, quickButton, input, headerInput, sourceInput];
   for (const el of controls) el.disabled = true;
   if (quick) quickButton.textContent = '正在解析节点…';
   else submit.firstChild.textContent = '正在转换… ';
@@ -280,7 +284,7 @@ form.addEventListener('submit', async e => {
     const response = await fetch('/api/convert', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: 'auto', input: value }),
+      body: JSON.stringify({ mode: 'auto', input: value, headerText, headerSource }),
       signal: AbortSignal.timeout(18000),
     });
     const data = await response.json().catch(() => null);
