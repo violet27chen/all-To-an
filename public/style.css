@@ -78,6 +78,14 @@ textarea{width:100%;display:block;color:var(--ink);background:#fbfcf7;border:1px
     grid-template-columns: 1fr;
   }
 }
+.provider-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 16px;
+  margin-left: 16px;
+  text-align: right;
+}
 .request-options {
   margin-top: 12px;
 }

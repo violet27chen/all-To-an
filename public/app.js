@@ -3,7 +3,7 @@ const form = $('form');
 const input = $('content');
 let nodes = [], visibleNodes = [], showNodeList = false, editingNodes = false, noticeTimer, pending = false;
 let liveSource = null;
-let providerResult = false;
+let providerResult = '';
 const removedNodes = new Set();
 const retainedNodes = () => nodes.filter(node => !removedNodes.has(node.link));
 input.addEventListener('input', () => { $('error').hidden = true; });
@@ -46,7 +46,7 @@ function downloadFile(content, type, filename) {
 $('download').addEventListener('click', () => {
   downloadFile(links(visibleNodes) + '\n', 'text/plain;charset=utf-8', 'allToan-nodes.txt');
 });
-function render(data, previewNodes = false, source = null, provider = false) {
+function render(data, previewNodes = false, source = null, provider = '') {
   nodes = data.nodes;
   providerResult = provider;
   liveSource = data.inputType === 'url' || data.inputType === 'mixed' ? source : null;
@@ -87,6 +87,11 @@ function render(data, previewNodes = false, source = null, provider = false) {
 const protocolChoices = () => [...$('protocol-choices').querySelectorAll('input')];
 const selectedProtocols = () => protocolChoices().filter(input => input.checked).map(input => input.value);
 function applyFilter() {
+  for (const provider of ['vpncheap', 'freesocks']) {
+    $(provider + '-generated').hidden = true;
+    $(provider + '-new-url').value = '';
+  }
+  $('vpncheap-copy-url').hidden = true;
   const selected = new Set(selectedProtocols());
   visibleNodes = retainedNodes().filter(node => selected.has(node.protocol));
   $('subscription').hidden = !visibleNodes.length;
@@ -195,10 +200,10 @@ function showProfiles(profiles) {
     const format = profiles.verge?.path ? 'verge' : 'universal';
     const path = profiles[format]?.path;
     if (path) {
-      $('vpncheap-new-label').textContent = '新订阅地址（' + profileLabels[format] + '）';
-      $('vpncheap-new-url').value = new URL(path, location.origin).href;
-      $('vpncheap-generated').hidden = false;
-      $('vpncheap-copy-url').hidden = false;
+      $(providerResult + '-new-label').textContent = '新订阅地址（' + profileLabels[format] + '）';
+      $(providerResult + '-new-url').value = new URL(path, location.origin).href;
+      $(providerResult + '-generated').hidden = false;
+      if (providerResult === 'vpncheap') $('vpncheap-copy-url').hidden = false;
     }
   }
   const list = $('profiles');
@@ -245,7 +250,7 @@ async function publishSubscription(errorBox = $('publish-error')) {
   const button = $('publish-button');
   const selection = visibleNodes;
   if (button.disabled || !selection.length) return;
-  const submitButtons = ['submit', 'quick-publish', 'vpncheap-login'].map($);
+  const submitButtons = ['submit', 'quick-publish', 'vpncheap-login', 'freesocks-generate'].map($);
   errorBox.hidden = true;
   button.disabled = true;
   for (const submit of submitButtons) submit.disabled = true;
@@ -288,6 +293,7 @@ $('publish-form').addEventListener('submit', event => {
 });
 
 const vpncheapControls = ['vpncheap-email', 'vpncheap-password', 'vpncheap-login'].map($);
+const freesocksControls = ['freesocks-input', 'freesocks-generate'].map($);
 let vpncheapCurl = '', vpncheapYaml = '';
 
 async function postJson(url, payload) {
@@ -302,33 +308,36 @@ async function postJson(url, payload) {
   return data;
 }
 
-async function runConversion(getSource, { quick = false, provider = false } = {}) {
+async function runConversion(getSource, { quick = false, provider = '' } = {}) {
   if (pending) return;
   const headerInput = $('request-headers');
   const sourceInput = $('header-source');
-  const status = $('vpncheap-status');
-  const errorBox = $(provider ? 'vpncheap-error' : 'error');
+  const status = $(provider ? provider + '-status' : 'vpncheap-status');
+  const providerName = provider === 'freesocks' ? 'FreeSocks' : 'VPNCheap';
+  const errorBox = $(provider ? provider + '-error' : 'error');
   pending = true;
   errorBox.hidden = true;
   render({ nodes: [] });
   const submit = $('submit');
   const quickButton = $('quick-publish');
-  const controls = [submit, quickButton, input, headerInput, sourceInput, ...vpncheapControls];
+  const controls = [submit, quickButton, input, headerInput, sourceInput, ...vpncheapControls, ...freesocksControls];
   for (const el of controls) el.disabled = true;
-  if (provider) status.textContent = '正在读取 VPNCheap 订阅…';
+  if (provider) status.textContent = '正在读取 ' + providerName + ' 节点…';
   else if (quick) quickButton.textContent = '正在解析节点…';
   else submit.firstChild.textContent = '正在转换… ';
   try {
     const source = await getSource();
-    const data = await postJson('/api/convert', { mode: 'auto', ...source, exportVerge: provider });
-    render(data, !quick, source, provider);
+    const data = await postJson('/api/convert', { mode: 'auto', ...source, exportVerge: !!provider });
+    render(data, !quick && !provider, source, provider);
     if (provider) {
-      vpncheapYaml = data.verge?.body || '';
-      $('vpncheap-yaml').hidden = !vpncheapYaml;
+      if (provider === 'vpncheap') {
+        vpncheapYaml = data.verge?.body || '';
+        $('vpncheap-yaml').hidden = !vpncheapYaml;
+      }
       status.textContent = '已提取 ' + data.nodes.length + ' 个节点，正在生成订阅…';
       const published = await publishSubscription(errorBox);
-      status.textContent = '已提取 ' + data.nodes.length + ' 个节点。';
-      if (published) $('vpncheap-new-url').focus();
+      status.textContent = '已提取 ' + data.nodes.length + ' 个节点' + (published ? '，已生成新订阅。' : '，可在下方重试生成订阅。');
+      if (published) $(provider + '-new-url').focus();
     } else if (quick) {
       quickButton.textContent = '正在生成订阅…';
       await publishSubscription();
@@ -372,7 +381,7 @@ function extractVpncheap(credentials) {
     $('vpncheap-details').hidden = false;
     vpncheapCurl = curl;
     return { input, headerText, headerSource };
-  }, { provider: true });
+  }, { provider: 'vpncheap' });
 }
 
 $('vpncheap-login-form').addEventListener('submit', event => {
@@ -387,3 +396,18 @@ $('vpncheap-copy-curl').addEventListener('click', () => copy(vpncheapCurl, '已�
 $('vpncheap-yaml').addEventListener('click', () => {
   if (vpncheapYaml) downloadFile(vpncheapYaml, 'application/yaml;charset=utf-8', 'vpncheap-clash-verge.yaml');
 });
+
+$('freesocks-form').addEventListener('submit', event => {
+  event.preventDefault();
+  if (pending) return;
+  const value = $('freesocks-input').value.trim();
+  if (!value) { $('freesocks-input').focus(); return; }
+  if (/^\s*\d[\d\s-]{20,}\s*$/.test(value)) {
+    $('freesocks-error').textContent = '这里需要官网提供的订阅地址或节点链接，请勿填写账号号码。';
+    $('freesocks-error').hidden = false;
+    return;
+  }
+  void runConversion(() => ({ input: value }), { provider: 'freesocks' });
+});
+$('freesocks-input').addEventListener('input', () => { $('freesocks-error').hidden = true; });
+$('freesocks-copy-url').addEventListener('click', () => copy($('freesocks-new-url').value, '已复制 FreeSocks 新订阅地址'));

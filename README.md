@@ -35,6 +35,12 @@ X-Client-Encrypt: v1
 
 默认只对已支持的 VPNCheap HTTPS 订阅域名解密。若服务商更换域名，部署者可将 `VPNCHEAP_SUBSCRIPTION_ORIGIN` 设置为新的 HTTPS 源（只填协议和域名，不含路径）。解密成功后，AnyTLS 和 Hysteria2 出站可正常解析和生成动态订阅。
 
+### FreeSocks 免费节点
+
+主页的「FreeSocks 免费节点」提供[官网领取入口](https://freesocks.org/get-account)。在官网完成人机验证、保存账号号码并创建连接后，复制订阅地址或节点链接到专区，点击「一键转换为新订阅」。页面直接显示新地址，并提供协议筛选、节点移除及 Clash Verge / Mihomo 导入。
+
+FreeSocks 的注册和账号登录均需官方验证码，本项目不提供无人参与的自动注册，也不接收 FreeSocks 账号号码。HTTPS 订阅地址沿用动态回源和最近成功结果缓存；单独的 `ss://`、`vless://` 等节点链接保存为快照。生成新地址需要下方的 Private Blob 配置。
+
 ### 生成新订阅
 
 部署者[启用新订阅发布](#启用新订阅发布)后，任何访客都可以在结果下方点击「生成订阅链接」，再按客户端选择格式。新链接会应用当前筛选条件。

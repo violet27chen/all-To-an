@@ -11,7 +11,7 @@
 </head>
 <body>
   <header class="mast">
-    <div class="shell top"><a class="brand" href="/" aria-label="allToan 首页"><span class="mark">a↗</span>allToan</a><a class="edition" href="#vpncheap">VPNCheap 节点提取</a></div>
+    <div class="shell top"><a class="brand" href="/" aria-label="allToan 首页"><span class="mark">a↗</span>allToan</a><nav class="provider-nav" aria-label="服务商节点"><a class="edition" href="#vpncheap">VPNCheap</a><a class="edition" href="#freesocks">FreeSocks 免费节点</a></nav></div>
   </header>
   <main class="shell">
     <section class="hero">
@@ -78,6 +78,24 @@
       </div>
       <p id="vpncheap-status" class="hint" role="status"></p>
       <p id="vpncheap-error" class="error" role="alert" hidden></p>
+    </section>
+    <section class="card vpncheap-card" id="freesocks" aria-labelledby="freesocks-title">
+      <div class="section-top"><span class="step">FREE</span><h2 id="freesocks-title">FreeSocks 免费节点</h2></div>
+      <p class="hint" id="freesocks-guide">先在 FreeSocks 官网完成人机验证，保存账号号码并创建连接，再复制订阅地址或节点链接到下方。</p>
+      <div class="actions"><a class="primary import-link" href="https://freesocks.org/get-account" target="_blank" rel="noopener noreferrer">获取免费节点 <span aria-hidden="true">↗</span></a><a class="edition" href="https://freesocks.org/account" target="_blank" rel="noopener noreferrer">已有账号，前往官网获取订阅</a></div>
+      <form id="freesocks-form" class="vpncheap-form">
+        <label for="freesocks-input">FreeSocks 订阅地址或节点链接</label>
+        <textarea id="freesocks-input" rows="3" required maxlength="1048576" spellcheck="false" autocomplete="off" aria-describedby="freesocks-guide freesocks-hint" placeholder="粘贴官网提供的 HTTPS 订阅地址、ss:// 或 vless:// 等节点链接…"></textarea>
+        <p class="hint" id="freesocks-hint">填写订阅或节点即可，无需向 allToan 提供账号号码。订阅地址支持动态刷新；独立节点保存为快照。</p>
+        <button class="primary" type="submit" id="freesocks-generate">一键转换为新订阅</button>
+      </form>
+      <div id="freesocks-generated" class="vpncheap-details" hidden>
+        <label for="freesocks-new-url" id="freesocks-new-label">新订阅地址</label>
+        <input id="freesocks-new-url" type="text" readonly spellcheck="false">
+        <div class="actions"><button class="quiet" type="button" id="freesocks-copy-url">复制新订阅</button></div>
+      </div>
+      <p id="freesocks-status" class="hint" role="status"></p>
+      <p id="freesocks-error" class="error" role="alert" hidden></p>
     </section>
     <section class="card results" aria-labelledby="result-title" id="results">
       <div class="result-head">
