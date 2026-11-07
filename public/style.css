@@ -48,14 +48,10 @@ textarea{width:100%;display:block;color:var(--ink);background:#fbfcf7;border:1px
   font-size: 13px;
   font-weight: 700;
 }
-.vpncheap-input-row,
 .vpncheap-fields {
   display: grid;
   gap: 8px;
   margin: 5px 0 8px;
-}
-.vpncheap-input-row {
-  grid-template-columns: minmax(0, 1fr) auto;
 }
 .vpncheap-fields {
   grid-template-columns: repeat(2, minmax(0, 1fr));

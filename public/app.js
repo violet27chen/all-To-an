@@ -245,7 +245,7 @@ async function publishSubscription(errorBox = $('publish-error')) {
   const button = $('publish-button');
   const selection = visibleNodes;
   if (button.disabled || !selection.length) return;
-  const submitButtons = ['submit', 'quick-publish', 'vpncheap-extract', 'vpncheap-login'].map($);
+  const submitButtons = ['submit', 'quick-publish', 'vpncheap-login'].map($);
   errorBox.hidden = true;
   button.disabled = true;
   for (const submit of submitButtons) submit.disabled = true;
@@ -287,7 +287,7 @@ $('publish-form').addEventListener('submit', event => {
   void publishSubscription();
 });
 
-const vpncheapControls = ['vpncheap-url', 'vpncheap-extract', 'vpncheap-email', 'vpncheap-password', 'vpncheap-login'].map($);
+const vpncheapControls = ['vpncheap-email', 'vpncheap-password', 'vpncheap-login'].map($);
 let vpncheapCurl = '', vpncheapYaml = '';
 
 async function postJson(url, payload) {
@@ -368,7 +368,6 @@ function extractVpncheap(credentials) {
     $('vpncheap-details').hidden = true;
     $('vpncheap-yaml').hidden = true;
     const { input, headerText, headerSource, curl } = await postJson('/api/vpncheap', credentials);
-    $('vpncheap-url').value = input;
     $('vpncheap-headers').textContent = headerText;
     $('vpncheap-details').hidden = false;
     vpncheapCurl = curl;
@@ -376,10 +375,6 @@ function extractVpncheap(credentials) {
   }, { provider: true });
 }
 
-$('vpncheap-url-form').addEventListener('submit', event => {
-  event.preventDefault();
-  void extractVpncheap({ url: $('vpncheap-url').value.trim() });
-});
 $('vpncheap-login-form').addEventListener('submit', event => {
   event.preventDefault();
   if (pending) return;

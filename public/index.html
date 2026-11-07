@@ -50,24 +50,17 @@
     <section class="card vpncheap-card" id="vpncheap" aria-labelledby="vpncheap-title">
       <div class="section-top"><span class="step">VPN</span><h2 id="vpncheap-title">VPNCheap 提取订阅节点</h2></div>
       <p class="hint">自动使用 VPNCheap 客户端的请求头提取节点，并生成新的动态订阅地址。</p>
-      <form id="vpncheap-url-form" class="vpncheap-form">
-        <label for="vpncheap-url">已有 VPNCheap 订阅网址</label>
-        <div class="vpncheap-input-row">
-          <input id="vpncheap-url" type="url" required maxlength="4096" autocomplete="off" spellcheck="false" placeholder="https://…">
-          <button class="primary" type="submit" id="vpncheap-extract">提取并生成订阅</button>
-        </div>
-      </form>
-      <details class="request-options">
-        <summary>用 VPNCheap 账号获取订阅</summary>
-        <p class="hint">邮箱和密码会通过本站转发给 VPNCheap，只用于当次登录。已有订阅网址时可直接用上方入口。</p>
+      <div class="request-options">
+        <p><strong>用 VPNCheap 账号获取订阅</strong></p>
+        <p class="hint">邮箱和密码会通过本站转发给 VPNCheap，只用于当次登录。</p>
         <form id="vpncheap-login-form" class="vpncheap-form">
           <div class="vpncheap-fields">
             <label for="vpncheap-email">账号邮箱<input id="vpncheap-email" type="email" required maxlength="254" autocomplete="username"></label>
             <label for="vpncheap-password">账号密码<input id="vpncheap-password" type="password" required maxlength="512" autocomplete="current-password"></label>
           </div>
-          <button class="quiet" type="submit" id="vpncheap-login">登录并生成订阅</button>
+          <button class="primary" type="submit" id="vpncheap-login">登录并生成订阅</button>
         </form>
-      </details>
+      </div>
       <div id="vpncheap-details" class="vpncheap-details" hidden>
         <div id="vpncheap-generated" hidden>
           <label for="vpncheap-new-url" id="vpncheap-new-label">新订阅地址</label>
